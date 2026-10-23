@@ -21,6 +21,28 @@ Design notes
   * NOTHING here is real student data. The category tree is a PLACEHOLDER:
     replace it with the real RMS dropdown values when you have them.
 """
+
+"""
+system needs examples of complaints to learn how to classify and handle them.
+This script automatically creates those examples.
+
+1. Creates fake student complaints
+It generates many sample complaints in English and Hinglish, such as hostel issues, fee problems, and safety concerns.
+
+2. Adds labels to each complaint
+It assigns information such as the complaint category, subcategory, and priority level (P1, P2, P3, or P4).
+
+3. Creates special test cases
+It includes sensitive complaints, unclear messages, complaints about multiple issues, and harmless messages that contain words that might trigger false alarms.
+
+4. Divides the data into separate sets
+It separates the generated complaints into training, validation, and testing datasets so a machine-learning model can be developed and evaluated.
+
+5. Saves everything into files
+It creates CSV files containing complaints and labels, along with configuration files containing settings for the project.
+
+
+"""
 import json
 import random
 import re
