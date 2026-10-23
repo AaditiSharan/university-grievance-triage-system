@@ -1,4 +1,4 @@
-# IF-THEN rules: ID, keywords, type, priority, route, human_review, auto_reply
+﻿# IF-THEN rules: ID, keywords, type, priority, route, human_review, auto_reply
 # =============================================================================
 # sensitivity_rules.yaml
 # Explicit production rules (IF text matches -> THEN escalate) for sensitive
@@ -19,7 +19,7 @@
 #   * Risky single words (die, kill, threat, accident) are only used with
 #     exclusions or as multi-word phrases, to avoid flooding the welfare team.
 #   * Every rule has human_review: true and auto_reply: false. Do not change.
-#   * route_to must match a department in routing_table.yaml (tests/test_config.py
+#   * route must match a department in routing_table.yaml (tests/test_config.py
 #     checks this).
 #   * Changing this file = changing policy. Bump `version`, record why in git.
 # =============================================================================
@@ -38,7 +38,7 @@ rules:
     type: SAFETY
     priority: P1
     alert_level: urgent
-    route_to: Anti-Ragging Cell
+    route: Anti-Ragging Cell
     human_review: true
     auto_reply: false
     rationale: Ragging is a legal offence and must reach the Anti-Ragging Cell quickly.
@@ -71,7 +71,7 @@ rules:
     type: SAFETY
     priority: P1
     alert_level: urgent
-    route_to: Internal Complaints Committee
+    route: Internal Complaints Committee
     human_review: true
     auto_reply: false
     rationale: Sexual and personal harassment need confidential, trained handling.
@@ -115,7 +115,7 @@ rules:
     type: SAFETY
     priority: P1
     alert_level: immediate
-    route_to: Security & Student Welfare
+    route: Security & Student Welfare
     human_review: true
     auto_reply: false
     rationale: Threats and physical violence are an immediate safety risk.
@@ -161,7 +161,7 @@ rules:
     type: WELFARE
     priority: P1
     alert_level: urgent
-    route_to: Counselling Centre
+    route: Counselling Centre
     human_review: true
     auto_reply: false
     rationale: Distress should reach a counsellor even when no crisis words are used.
@@ -201,7 +201,7 @@ rules:
     type: MEDICAL
     priority: P1
     alert_level: immediate
-    route_to: Health Centre & Student Welfare
+    route: Health Centre & Student Welfare
     human_review: true
     auto_reply: false
     rationale: Medical emergencies are time-critical. Routine hospital mentions are excluded.
@@ -241,7 +241,7 @@ rules:
     type: WELFARE
     priority: P1
     alert_level: immediate
-    route_to: Counselling Centre
+    route: Counselling Centre
     human_review: true
     auto_reply: false
     rationale: Highest-risk category. Must trigger an immediate human alert.
