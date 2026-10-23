@@ -1,1 +1,279 @@
 # IF-THEN rules: ID, keywords, type, priority, route, human_review, auto_reply
+# =============================================================================
+# sensitivity_rules.yaml
+# Explicit production rules (IF text matches -> THEN escalate) for sensitive
+# grievances. Read by src/rules/sensitivity_engine.py.
+#
+# HOW A RULE WORKS
+#   1. The description is lower-cased.
+#   2. Every keyword is searched as a whole word / whole phrase.
+#   3. If a match overlaps an `exclusions` phrase, THAT match is discarded.
+#      (Other occurrences elsewhere in the text still count.)
+#   4. Any surviving match fires the rule: priority P1, mandatory human review,
+#      no auto-reply, routed to `route_to`. The matched phrase is saved as
+#      EVIDENCE and shown on the dashboard.
+#   5. A rule firing ALWAYS overrides the classifier.
+#
+# DESIGN PRINCIPLES
+#   * A missed sensitive case is the worst failure -> lean towards flagging.
+#   * Risky single words (die, kill, threat, accident) are only used with
+#     exclusions or as multi-word phrases, to avoid flooding the welfare team.
+#   * Every rule has human_review: true and auto_reply: false. Do not change.
+#   * route_to must match a department in routing_table.yaml (tests/test_config.py
+#     checks this).
+#   * Changing this file = changing policy. Bump `version`, record why in git.
+# =============================================================================
+
+version: 1
+last_updated: 2026-10-23
+
+# When several rules fire on one message, ALL are recorded as evidence.
+# The route and alert level come from the earliest rule in this list.
+route_precedence: [R-006, R-005, R-003, R-001, R-002, R-004]
+
+rules:
+  # ---------------------------------------------------------------------------
+  - id: R-001
+    name: Ragging
+    type: SAFETY
+    priority: P1
+    alert_level: urgent
+    route_to: Anti-Ragging Cell
+    human_review: true
+    auto_reply: false
+    rationale: Ragging is a legal offence and must reach the Anti-Ragging Cell quickly.
+    keywords:
+      - ragging
+      - ragged
+      - bullied by seniors
+      - bullying by seniors
+      - humiliated by seniors
+      - forced by seniors
+      - seniors are forcing
+      - seniors forced
+      - seniors ne dhamki
+      - seniors ne force
+      - senior ne dhamki
+    exclusions:
+      - anti-ragging
+      - anti ragging
+      - antiragging
+      - no ragging
+      - ragging free
+      - ragging-free
+      - against ragging
+      - ragging awareness
+      - ragging policy
+
+  # ---------------------------------------------------------------------------
+  - id: R-002
+    name: Harassment
+    type: SAFETY
+    priority: P1
+    alert_level: urgent
+    route_to: Internal Complaints Committee
+    human_review: true
+    auto_reply: false
+    rationale: Sexual and personal harassment need confidential, trained handling.
+    keywords:
+      - harass
+      - harassed
+      - harassing
+      - harassment
+      - sexual harassment
+      - stalk
+      - stalked
+      - stalking
+      - molest
+      - molested
+      - molestation
+      - eve teasing
+      - eve-teasing
+      - inappropriate messages
+      - inappropriate message
+      - inappropriately
+      - obscene
+      - blackmail
+      - blackmailing
+      - touched me
+      - passes personal comments
+      - makes me uncomfortable
+      - chhedkhani
+      - chhed chhad
+    exclusions:
+      - harassment awareness
+      - harassment workshop
+      - harassment policy
+      - anti-harassment
+      - anti harassment
+      - no harassment
+      - against harassment
+
+  # ---------------------------------------------------------------------------
+  - id: R-003
+    name: Threat or violence
+    type: SAFETY
+    priority: P1
+    alert_level: immediate
+    route_to: Security & Student Welfare
+    human_review: true
+    auto_reply: false
+    rationale: Threats and physical violence are an immediate safety risk.
+    keywords:
+      - threaten
+      - threatened
+      - threatening
+      - threat to my life
+      - threat to me
+      - will kill
+      - kill me
+      - kill us
+      - beat me
+      - beat us
+      - beating me
+      - assault
+      - assaulted
+      - attacked
+      - attack me
+      - weapon
+      - knife
+      - hurt me
+      - harm me
+      - dhamki
+      - maarne ki
+      - maar dalenge
+      - maarpeet
+      - marpeet
+    exclusions:
+      - threat to my exam
+      - threat to my eligibility
+      - threat to my attendance
+      - threat to my career
+      - threat to my result
+      - heart attack
+      - panic attack
+      - anxiety attack
+      - attack of fever
+
+  # ---------------------------------------------------------------------------
+  - id: R-004
+    name: Mental health concern
+    type: WELFARE
+    priority: P1
+    alert_level: urgent
+    route_to: Counselling Centre
+    human_review: true
+    auto_reply: false
+    rationale: Distress should reach a counsellor even when no crisis words are used.
+    keywords:
+      - depressed
+      - depression
+      - hopeless
+      - panic attack
+      - anxiety attack
+      - severe anxiety
+      - cannot take this anymore
+      - can't take this anymore
+      - cant take this anymore
+      - no point in living
+      - no reason to continue
+      - want to give up everything
+      - give up everything
+      - cannot sleep for days
+      - mentally disturbed
+      - mentally stressed
+      - need counselling urgently
+      - need someone to talk to
+      - bahut depression
+      - depression ho raha
+      - akela mehsoos
+    exclusions:
+      - depression awareness
+      - stress management session
+      - counselling timings
+      - mental health awareness
+      - mental health workshop
+      - mental health day
+
+  # ---------------------------------------------------------------------------
+  - id: R-005
+    name: Medical emergency
+    type: MEDICAL
+    priority: P1
+    alert_level: immediate
+    route_to: Health Centre & Student Welfare
+    human_review: true
+    auto_reply: false
+    rationale: Medical emergencies are time-critical. Routine hospital mentions are excluded.
+    keywords:
+      - ambulance
+      - unconscious
+      - not responding
+      - fainted
+      - collapsed
+      - seizure
+      - chest pain
+      - bleeding
+      - heart attack
+      - food poisoning
+      - badly injured
+      - severely injured
+      - overdose
+      - accident
+      - emergency
+      - turant doctor
+      - bahut chot
+      - behosh
+    exclusions:
+      - minor accident
+      - accident last week
+      - caused an accident
+      - accidentally
+      - emergency leave
+      - emergency contact
+      - emergency exit
+      - emergency exam
+      - medical emergency certificate
+
+  # ---------------------------------------------------------------------------
+  - id: R-006
+    name: Self-harm or suicide
+    type: WELFARE
+    priority: P1
+    alert_level: immediate
+    route_to: Counselling Centre
+    human_review: true
+    auto_reply: false
+    rationale: Highest-risk category. Must trigger an immediate human alert.
+    keywords:
+      - suicide
+      - suicidal
+      - end my life
+      - ending my life
+      - end his life
+      - end her life
+      - end their life
+      - kill myself
+      - killing myself
+      - self harm
+      - self-harm
+      - hurt myself
+      - harm myself
+      - want to die
+      - wish i was dead
+      - better off dead
+      - take my own life
+      - mar jaun
+      - marne ka mann
+      - jaan de dunga
+      - jaan de dungi
+      - khud ko khatam
+      - khud ko nuksaan
+      - khud ko hurt
+      - zindagi khatam
+    exclusions:
+      - die of boredom
+      - die of embarrassment
+      - die laughing
+      - suicide squad
+      - suicide awareness
