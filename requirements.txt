@@ -14,6 +14,7 @@ python-dotenv
 sqlalchemy
 pyjwt
 passlib[bcrypt]
+bcrypt<4.1
 httpx
 sentence-transformers
 torch

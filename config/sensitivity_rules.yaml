@@ -1,1 +1,47 @@
-# IF-THEN rules: ID, keywords, type, priority, route, human_review, auto_reply
+rules:
+  - id: R01
+    name: Ragging
+    keywords: [ragging, rag, bully, bullying, harassing, forcing introductions, seniors forcing, demanding money]
+    type: SAFETY
+    priority: P1
+    route: Anti-Ragging Cell
+    human_review: true
+  - id: R02
+    name: Harassment
+    keywords: [harassment, harass, harassing, stalking, stalked, molestation, inappropriate touch, sexual, eve teasing, blackmail, blackmailing, pareshan kar]
+    type: SAFETY
+    priority: P1
+    route: Internal Complaints Committee
+    human_review: true
+  - id: R03
+    name: Mental Health
+    keywords: [suicide, suicidal, self harm, self to harm, depression, anxiety, mental breakdown, want to die, give up everything, cannot take this anymore, can't take this anymore, khud to harm]
+    type: MENTAL_HEALTH
+    priority: P1
+    route: Counselling Centre
+    human_review: true
+  - id: R04
+    name: Threat or Violence
+    keywords: [threat, threatened, threatening, violence, assault, assaulted, physically assaulted, attack, dangerous, weapon, feel unsafe, hit, hitting]
+    type: SAFETY
+    priority: P1
+    route: Security & Student Welfare
+    human_review: true
+  - id: R05
+    name: Medical Emergency
+    keywords: [emergency, ambulance, fainted, unconscious, bleeding, injured, injury, accident, seizure, high fever]
+    type: MEDICAL
+    priority: P1
+    route: Health Centre & Student Welfare
+    human_review: true
+  - id: R06
+    name: Urgent Deadline
+    keywords: [deadline, due date, due by, submission closes]
+    type: DEADLINE
+    priority_boost: true
+    human_review: false
+  - id: R07
+    name: Confidentiality Request
+    keywords: [confidential, anonymous, do not reveal, keep my name, private]
+    type: CONFIDENTIAL
+    human_review: true

@@ -1,1 +1,25 @@
-#Confidence threshold, similarity threshold, priority weights, auto-reply on/off
+classifier:
+  confidence_threshold: 0.60
+  low_confidence_threshold: 0.40
+  model_path: src/classifier/models/tfidf_lr_model.joblib
+  vectorizer_path: src/classifier/models/tfidf_vectorizer.joblib
+  label_encoder_path: src/classifier/models/label_encoder.joblib
+
+completeness:
+  min_description_words: 5
+  min_description_chars: 20
+
+priority:
+  weights:
+    sensitive: 10
+    urgent_deadline: 5
+    low_confidence: 2
+    incomplete: 1
+  levels:
+    P1: Critical
+    P2: High
+    P3: Normal
+    P4: Low
+
+database:
+  url: sqlite:///./grievances.db
