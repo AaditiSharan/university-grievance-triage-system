@@ -1,0 +1,107 @@
+{
+  "_note": "PLACEHOLDER tree. Replace with the real RMS dropdown values.",
+  "tree": {
+    "Academics": {
+      "Timetable": [
+        "Section Timetable Not Updated",
+        "Class Clash"
+      ],
+      "Attendance": [
+        "Attendance Not Updated",
+        "Attendance Shortage Condonation"
+      ],
+      "Course Registration": [
+        "Elective Change Request"
+      ],
+      "Online Classes": [
+        "Online Class Link Issue"
+      ]
+    },
+    "Examination": {
+      "Results": [
+        "Result Not Declared",
+        "Marks Mismatch"
+      ],
+      "Re-evaluation": [
+        "Re-evaluation Request"
+      ],
+      "Admit Card": [
+        "Admit Card Not Generated"
+      ],
+      "Datesheet": [
+        "Exam Schedule Concern"
+      ]
+    },
+    "Finance": {
+      "Fee": [
+        "Fee Payment Not Reflected",
+        "Fee Receipt Request",
+        "Fee Concession Request"
+      ],
+      "Scholarship": [
+        "Scholarship Not Credited"
+      ]
+    },
+    "Hostel": {
+      "Maintenance": [
+        "Room Maintenance"
+      ],
+      "Mess": [
+        "Mess Food Quality"
+      ]
+    },
+    "IT Services": {
+      "Network": [
+        "Wi-Fi Not Working"
+      ],
+      "UMS": [
+        "UMS Login Issue"
+      ]
+    },
+    "Administration": {
+      "Documents": [
+        "Bonafide Certificate Request",
+        "ID Card Issue"
+      ],
+      "Transport": [
+        "Bus Route or Timing"
+      ],
+      "Library": [
+        "Library Book or Access Issue"
+      ]
+    },
+    "Events & Activities": {
+      "Duty Leave": [
+        "Event DL Not Updated"
+      ],
+      "Events": [
+        "Event Registration Query"
+      ]
+    },
+    "Student Welfare": {
+      "Ragging": [
+        "Ragging Complaint"
+      ],
+      "Harassment": [
+        "Harassment Complaint"
+      ],
+      "Threat or Violence": [
+        "Threat or Violence Report"
+      ],
+      "Mental Health": [
+        "Mental Health Concern"
+      ],
+      "Medical Emergency": [
+        "Medical Emergency"
+      ]
+    },
+    "Feedback & Suggestions": {
+      "Positive Feedback": [
+        "Positive Feedback"
+      ],
+      "Suggestion": [
+        "General Suggestion"
+      ]
+    }
+  }
+}

@@ -1,0 +1,35 @@
+default: General Grievance Queue
+unclear: Manual Triage
+routes:
+  Section Timetable Not Updated: Academic Operations
+  Class Clash: Academic Operations
+  Attendance Not Updated: Academic Operations
+  Attendance Shortage Condonation: Academic Operations
+  Elective Change Request: Academic Operations
+  Online Class Link Issue: Academic Operations
+  Result Not Declared: Examination Cell
+  Marks Mismatch: Examination Cell
+  Re-evaluation Request: Examination Cell
+  Admit Card Not Generated: Examination Cell
+  Exam Schedule Concern: Examination Cell
+  Fee Payment Not Reflected: Accounts Office
+  Fee Receipt Request: Accounts Office
+  Fee Concession Request: Accounts Office
+  Scholarship Not Credited: Scholarship Cell
+  Room Maintenance: Hostel Administration
+  Mess Food Quality: Hostel Administration
+  Wi-Fi Not Working: IT Services
+  UMS Login Issue: IT Services
+  Bonafide Certificate Request: Registrar Office
+  ID Card Issue: Registrar Office
+  Bus Route or Timing: Transport Office
+  Library Book or Access Issue: Library
+  Event DL Not Updated: Student Activities (SDMA)
+  Event Registration Query: Student Activities (SDMA)
+  Ragging Complaint: Anti-Ragging Cell
+  Harassment Complaint: Internal Complaints Committee
+  Threat or Violence Report: Security & Student Welfare
+  Mental Health Concern: Counselling Centre
+  Medical Emergency: Health Centre & Student Welfare
+  Positive Feedback: Feedback Registry
+  General Suggestion: Feedback Registry
