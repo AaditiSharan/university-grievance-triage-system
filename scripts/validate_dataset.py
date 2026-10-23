@@ -5,6 +5,39 @@ Sanity checks for the synthetic dataset. Run from the project root:
     python scripts/validate_dataset.py
 Exits with code 1 if a hard check fails.
 """
+
+"""
+The `validate_dataset.py` script is a data quality validation utility for the University Grievance Triage System. 
+It uses Pandas to load the synthetic grievance dataset and its train, validation, and test splits, along with the incident records and category hierarchy.
+
+1. Checks missing information: Makes sure important details, such as complaint descriptions and IDs, are not empty.
+2. Checks duplicate IDs: Ensures two complaints don't accidentally have the same ID.
+3. Checks the data splits: Verifies that the training, validation, and testing datasets have the expected total number
+ of records and checks for certain types of overlap.
+4.Checks complaint categories: Ensures every complaint's category exists in the predefined category list.
+5.Checks sensitive complaints: Makes sure complaints marked as sensitive have P1 priority and require human review.
+6.Checks duplicate complaints: Finds identical complaint descriptions outside groups where repetition is expected.
+7.Checks incident records: Ensures that complaint groups match the incident records.
+8.Prints statistics: Shows information such as the number of complaints in each category, the languages used, and how many contact numbers are missing.
+
+What happens at the end?
+- PASS: The check is successful.
+- FAIL: The script finds a problem and records it.
+- If any hard check fails, the script exits with error code 1.
+
+For example, a fictional harmless complaint might say:
+"The hostel security guard threatened to charge a fine if I did not return the library book."
+
+Depending on the wording, a poorly designed detector might incorrectly identify the message as a serious threat.
+
+The dataset uses the record type "edge_harmless_trigger" to identify specially designed examples that test this behavior. 
+The check verifies that all those records have sensitive_label = 0.
+
+This helps test whether the system can distinguish genuinely sensitive complaints from harmless text containing misleading trigger words.
+
+validate_dataset.py checks whether the data used in your University Grievance Triage System is correct and ready for the AI model.
+
+"""
 import json
 import sys
 from pathlib import Path
