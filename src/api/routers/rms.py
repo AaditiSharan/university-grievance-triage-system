@@ -35,6 +35,7 @@ def submit_grievance(
             course_code=payload.course_code,
             event_name=payload.event_name,
             contact_no=payload.contact_no,
+            created_by=current_user.username,
             commit=False,
         )
         crud.save_ai_analysis(db, grievance.grievance_id, analysis, commit=False)

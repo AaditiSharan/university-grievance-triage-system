@@ -4,6 +4,7 @@ export interface User {
   username: string;
   email: string;
   role: 'student' | 'faculty' | 'staff' | 'admin';
+  department?: string | null;
 }
 
 export interface LoginResponse {
@@ -75,6 +76,22 @@ export interface Grievance {
   updated_at?: string;
   ai_analysis?: AIAnalysis;
   human_decision?: HumanDecision;
+  status_history?: StatusHistoryEntry[];
+  audit_events?: AuditEvent[];
+}
+
+export interface AuditEvent {
+  action: string;
+  actor: string;
+  details: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface StatusHistoryEntry {
+  previous_status?: string | null;
+  new_status: string;
+  changed_by: string;
+  changed_at: string;
 }
 
 export interface HumanDecision {
@@ -84,6 +101,7 @@ export interface HumanDecision {
   final_route?: string;
   final_priority?: string;
   decision_notes?: string;
+  resolution_solution?: string;
   decided_at: string;
 }
 
@@ -111,7 +129,19 @@ export interface HumanDecisionPayload {
   final_route?: string;
   final_priority?: string;
   decision_notes?: string;
+  resolution_solution?: string;
   new_status: 'under_review' | 'resolved' | 'closed' | 'escalated';
+}
+
+export interface DraftResponse {
+  grievance_id: string;
+  draft: string;
+  requires_individual_review: boolean;
+}
+
+export interface BulkDecisionItem extends HumanDecisionPayload {
+  grievance_id: string;
+  approved: boolean;
 }
 
 // ─── Category Tree ───────────────────────────────────────────────────────────

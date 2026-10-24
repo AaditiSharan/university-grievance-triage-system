@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 
 function Navbar() {
-  const { isAuthenticated, isAdmin, user, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
+  const canAccessQueue = user?.role === 'faculty' || user?.role === 'staff' || user?.role === 'admin';
   const navigate = useNavigate();
 
   if (!isAuthenticated) return null;
@@ -60,10 +61,10 @@ function Navbar() {
               <ClipboardList className="h-4 w-4" />
               <span className="hidden sm:inline">My Submissions</span>
             </NavLink>
-            {isAdmin && (
-              <NavLink to="/admin" className={linkClass}>
+            {canAccessQueue && (
+              <NavLink to="/dashboard" className={linkClass}>
                 <LayoutDashboard className="h-4 w-4" />
-                <span className="hidden sm:inline">Admin</span>
+                <span className="hidden sm:inline">{user?.role === 'faculty' ? 'Department Queue' : 'Staff Dashboard'}</span>
               </NavLink>
             )}
           </div>
@@ -72,8 +73,8 @@ function Navbar() {
           <div className="flex items-center gap-3">
             <span className="text-indigo-200 text-sm hidden sm:block">
               {user?.username}
-              {user?.role === 'admin' && (
-                <span className="ml-1.5 badge bg-indigo-800 text-indigo-100">admin</span>
+              {user?.role && (
+                <span className="ml-1.5 badge bg-indigo-800 text-indigo-100">{user.role}</span>
               )}
             </span>
             <button
@@ -91,7 +92,12 @@ function Navbar() {
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const home = !isAuthenticated
+    ? '/login'
+    : user?.role === 'staff' || user?.role === 'faculty' || user?.role === 'admin'
+      ? '/dashboard'
+      : '/submit';
 
   return (
     <>
@@ -100,7 +106,7 @@ function AppRoutes() {
         <Routes>
           <Route
             path="/"
-            element={<Navigate to={isAuthenticated ? '/submit' : '/login'} replace />}
+            element={<Navigate to={home} replace />}
           />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -125,6 +131,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <MyGrievances />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['faculty', 'staff', 'admin']}>
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />

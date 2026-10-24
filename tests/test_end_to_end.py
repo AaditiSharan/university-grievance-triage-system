@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from src.api.routers import admin, auth, rms
+from src.api.routers import admin, auth, rms, staff
 from src.auth.security import get_password_hash
 from src.db.connection import get_db
 from src.db.models import Base, User
@@ -34,6 +34,7 @@ def api() -> Iterator[tuple[TestClient, sessionmaker]]:
     app.include_router(auth.router, prefix="/api")
     app.include_router(rms.router, prefix="/api")
     app.include_router(admin.router, prefix="/api")
+    app.include_router(staff.router, prefix="/api")
     app.dependency_overrides[get_db] = override_db
     with TestClient(app) as client:
         yield client, test_sessions
@@ -70,6 +71,16 @@ def test_grievance_submission_tracking_and_human_review(api: tuple[TestClient, s
         },
     )
     assert prohibited_admin.status_code == 403
+    prohibited_staff = client.post(
+        "/api/auth/register",
+        json={
+            "username": "self-appointed-staff",
+            "email": "self-appointed-staff@example.edu",
+            "password": "test-password-123",
+            "role": "staff",
+        },
+    )
+    assert prohibited_staff.status_code == 403
 
     submission = client.post(
         "/api/rms/submit",
@@ -144,6 +155,11 @@ def test_grievance_submission_tracking_and_human_review(api: tuple[TestClient, s
     assert reviewed["human_decision"]["decided_by"] == "review-admin"
     assert reviewed["human_decision"]["final_route"] == "Network Operations"
     assert reviewed["ai_analysis"]["routed_to"] == "IT Services"
+    student_view_after_review = client.get(
+        f"/api/rms/track/{grievance_id}", headers=student_headers
+    ).json()
+    assert "audit_events" not in student_view_after_review
+    assert student_view_after_review["status_history"][-1]["changed_by"] == "review-admin"
 
     stats = client.get("/api/rms/admin/stats", headers=admin_headers).json()
     assert stats["total"] == 1
@@ -285,10 +301,221 @@ def test_database_startup_adds_analysis_details_to_existing_schema(monkeypatch: 
     engine = create_engine("sqlite://")
     with engine.begin() as db_connection:
         db_connection.execute(text("CREATE TABLE ai_analyses (id INTEGER PRIMARY KEY)"))
+        db_connection.execute(text("CREATE TABLE users (id INTEGER PRIMARY KEY)"))
+        db_connection.execute(text("CREATE TABLE human_decisions (id INTEGER PRIMARY KEY)"))
     monkeypatch.setattr(connection, "engine", engine)
     connection.create_tables()
     column_names = {
         column["name"] for column in inspect(engine).get_columns("ai_analyses")
     }
     assert "analysis_details" in column_names
+    assert "department" in {
+        column["name"] for column in inspect(engine).get_columns("users")
+    }
+    assert "resolution_solution" in {
+        column["name"] for column in inspect(engine).get_columns("human_decisions")
+    }
+    assert inspect(engine).has_table("status_history")
     engine.dispose()
+
+
+def _provision_account(
+    client: TestClient,
+    sessions: sessionmaker,
+    username: str,
+    role: str,
+    department: str | None = None,
+) -> str:
+    with sessions() as db:
+        db.add(
+            User(
+                username=username,
+                email=f"{username}@example.edu",
+                hashed_password=get_password_hash("staff-password-123"),
+                role=role,
+                department=department,
+            )
+        )
+        db.commit()
+    response = client.post(
+        "/api/auth/login",
+        data={"username": username, "password": "staff-password-123"},
+    )
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
+
+def _seed_grievance(
+    sessions: sessionmaker,
+    *,
+    department: str = "IT Services",
+    sensitive: bool = False,
+) -> str:
+    from src.db import crud
+
+    with sessions() as db:
+        grievance = crud.create_grievance(
+            db,
+            user_id=None,
+            message_type="Grievance",
+            description="The campus Wi-Fi connection repeatedly disconnects.",
+            created_by="student",
+        )
+        crud.save_ai_analysis(
+            db,
+            grievance.grievance_id,
+            {
+                "predicted_master": department,
+                "predicted_category": "Connectivity",
+                "predicted_subcategory": "Wi-Fi Not Working",
+                "sensitivity_flag": sensitive,
+                "sensitivity_type": "SAFETY" if sensitive else "NONE",
+                "priority_label": "P2",
+                "routed_to": department,
+                "needs_human_review": True,
+            },
+        )
+        return grievance.grievance_id
+
+
+def test_staff_queue_is_department_scoped_and_faculty_is_read_only(
+    api: tuple[TestClient, sessionmaker],
+) -> None:
+    client, sessions = api
+    local_id = _seed_grievance(sessions, department="IT Services")
+    other_id = _seed_grievance(sessions, department="Housing")
+    staff_token = _provision_account(client, sessions, "it-staff", "staff", "IT Services")
+    faculty_token = _provision_account(client, sessions, "it-faculty", "faculty", "IT Services")
+    student_token = register_and_login(client, "queue-student", "queue-student@example.edu")
+
+    queue = client.get(
+        "/api/rms/staff/grievances",
+        headers={"Authorization": f"Bearer {staff_token}"},
+    )
+    assert queue.status_code == 200
+    assert [item["grievance_id"] for item in queue.json()] == [local_id]
+    assert other_id not in [item["grievance_id"] for item in queue.json()]
+    denied_student = client.get(
+        "/api/rms/staff/grievances",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert denied_student.status_code == 403
+    denied_faculty_review = client.post(
+        f"/api/rms/staff/review/{local_id}",
+        headers={"Authorization": f"Bearer {faculty_token}"},
+        json={"new_status": "under_review"},
+    )
+    assert denied_faculty_review.status_code == 403
+    denied_cross_department = client.post(
+        f"/api/rms/staff/review/{other_id}",
+        headers={"Authorization": f"Bearer {staff_token}"},
+        json={"new_status": "under_review"},
+    )
+    assert denied_cross_department.status_code == 403
+
+
+def test_sensitive_grievance_cannot_receive_ai_draft_but_human_review_can_resolve(
+    api: tuple[TestClient, sessionmaker],
+) -> None:
+    client, sessions = api
+    grievance_id = _seed_grievance(sessions, sensitive=True)
+    from src.db.models import AIAnalysis
+
+    with sessions() as db:
+        analysis = db.query(AIAnalysis).filter_by(grievance_id=grievance_id).one()
+        analysis.sensitivity_flag = False
+        db.commit()
+    token = _provision_account(client, sessions, "safety-staff", "staff", "IT Services")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    denied = client.post(
+        "/api/rms/staff/draft-resolutions",
+        headers=headers,
+        json={"grievance_ids": [grievance_id]},
+    )
+    assert denied.status_code == 403
+
+    approved_human = client.post(
+        f"/api/rms/staff/review/{grievance_id}",
+        headers=headers,
+        json={
+            "new_status": "resolved",
+            "resolution_solution": "A staff member contacted the submitter and arranged a safe follow-up.",
+            "decision_notes": "Handled directly by the designated welfare team.",
+        },
+    )
+    assert approved_human.status_code == 200
+    body = approved_human.json()
+    assert body["status"] == "resolved"
+    assert body["human_decision"]["resolution_solution"].startswith("A staff member")
+    assert body["status_history"][-1]["changed_by"] == "safety-staff"
+    assert body["audit_events"][-1]["action"] == "HUMAN_REVIEW_APPROVED"
+
+
+def test_ai_draft_requires_explicit_request_and_does_not_resolve(
+    api: tuple[TestClient, sessionmaker],
+) -> None:
+    client, sessions = api
+    grievance_id = _seed_grievance(sessions)
+    token = _provision_account(client, sessions, "draft-staff", "staff", "IT Services")
+    response = client.post(
+        "/api/rms/staff/draft-resolutions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"grievance_ids": [grievance_id]},
+    )
+    assert response.status_code == 200
+    assert response.json()["saved_or_sent"] is False
+    assert response.json()["drafts"][0]["requires_individual_review"] is True
+    staff_queue = client.get(
+        "/api/rms/staff/grievances", headers={"Authorization": f"Bearer {token}"}
+    ).json()
+    audit_actions = [
+        event["action"]
+        for event in next(item for item in staff_queue if item["grievance_id"] == grievance_id)["audit_events"]
+    ]
+    assert "AI_RESOLUTION_DRAFT_REQUESTED" in audit_actions
+    missing_solution = client.post(
+        f"/api/rms/staff/review/{grievance_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"new_status": "resolved"},
+    )
+    assert missing_solution.status_code == 422
+    from src.db import crud
+
+    with sessions() as db:
+        grievance = crud.get_grievance_by_id(db, grievance_id)
+        assert grievance.status == "submitted"
+        assert grievance.human_decision is None
+
+
+def test_bulk_resolution_requires_individual_approval_and_tracks_status(
+    api: tuple[TestClient, sessionmaker],
+) -> None:
+    client, sessions = api
+    ids = [_seed_grievance(sessions), _seed_grievance(sessions)]
+    token = _provision_account(client, sessions, "bulk-staff", "staff", "IT Services")
+    headers = {"Authorization": f"Bearer {token}"}
+    item = lambda grievance_id, approved: {
+        "grievance_id": grievance_id,
+        "new_status": "resolved",
+        "resolution_solution": f"Staff solution for {grievance_id}",
+        "approved": approved,
+    }
+
+    rejected = client.post(
+        "/api/rms/staff/bulk-review",
+        headers=headers,
+        json={"items": [item(ids[0], True), item(ids[1], False)]},
+    )
+    assert rejected.status_code == 422
+    result = client.post(
+        "/api/rms/staff/bulk-review",
+        headers=headers,
+        json={"items": [item(ids[0], True), item(ids[1], True)]},
+    )
+    assert result.status_code == 200, result.text
+    assert result.json()["count"] == 2
+    for updated in result.json()["updated"]:
+        assert updated["status"] == "resolved"
+        assert updated["status_history"][-1]["changed_by"] == "bulk-staff"
+        assert updated["human_decision"]["resolution_solution"].startswith("Staff solution")

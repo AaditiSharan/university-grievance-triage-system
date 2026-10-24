@@ -15,10 +15,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
-    if payload.role == "admin":
+    if payload.role != "student":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Administrator accounts must be provisioned by an existing administrator.",
+            detail="Faculty, staff, and administrator accounts must be provisioned by an administrator.",
         )
     if get_user_by_username(db, payload.username):
         raise HTTPException(status_code=409, detail="Username is already registered.")
