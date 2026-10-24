@@ -20,7 +20,7 @@ def get_grievances(
     _admin: User = Depends(require_admin),
 ) -> list[dict]:
     return [
-        serialize_grievance(grievance)
+        serialize_grievance(grievance, include_audit=True)
         for grievance in crud.get_all_grievances(db, limit=1000)
     ]
 
@@ -42,7 +42,10 @@ def get_stats(
             continue
         by_priority[analysis.priority_label or "P3"] += 1
         by_master_category[analysis.predicted_master or "UNCLEAR"] += 1
-        sensitive_count += int(bool(analysis.sensitivity_flag))
+        sensitive_count += int(
+            bool(analysis.sensitivity_flag)
+            or (analysis.sensitivity_type or "NONE").upper() not in {"", "NONE"}
+        )
         pending_review += int(
             bool(analysis.needs_human_review) and grievance.human_decision is None
         )
@@ -77,11 +80,12 @@ def review_grievance(
                 "final_route": payload.final_route,
                 "final_priority": payload.final_priority,
                 "decision_notes": payload.decision_notes,
+                "resolution_solution": payload.resolution_solution,
             },
             commit=False,
         )
         crud.update_grievance_status(
-            db, grievance_id, payload.new_status, commit=False
+            db, grievance_id, payload.new_status, changed_by=admin.username, commit=False
         )
         crud.create_audit_log(
             db,
@@ -102,4 +106,4 @@ def review_grievance(
         db.rollback()
         raise
     db.refresh(grievance)
-    return serialize_grievance(grievance)
+    return serialize_grievance(grievance, include_audit=True)

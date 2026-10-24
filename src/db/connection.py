@@ -42,7 +42,16 @@ def create_tables():
     """Create all tables (called at application startup)."""
     from src.db.models import Base  # local import to avoid circular deps
     Base.metadata.create_all(bind=engine)
-    columns = {column["name"] for column in inspect(engine).get_columns("ai_analyses")}
-    if "analysis_details" not in columns:
-        with engine.begin() as connection:
-            connection.execute(text("ALTER TABLE ai_analyses ADD COLUMN analysis_details TEXT"))
+    migrations = {
+        "ai_analyses": {"analysis_details": "TEXT"},
+        "users": {"department": "VARCHAR(120)"},
+        "human_decisions": {"resolution_solution": "TEXT"},
+    }
+    with engine.begin() as connection:
+        for table, additions in migrations.items():
+            existing = {column["name"] for column in inspect(engine).get_columns(table)}
+            for column, column_type in additions.items():
+                if column not in existing:
+                    connection.execute(
+                        text(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
+                    )

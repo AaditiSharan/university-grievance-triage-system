@@ -5,7 +5,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routers import admin, auth, rms
+from src.api.routers import admin, auth, rms, staff
 from src.db.connection import create_tables
 
 app = FastAPI(
@@ -29,6 +29,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api")
 app.include_router(rms.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(staff.router, prefix="/api")
 
 
 @app.on_event("startup")

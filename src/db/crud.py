@@ -10,7 +10,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from src.db.models import (
-    AuditLog, Grievance, AIAnalysis, HumanDecision, User
+    AuditLog, Grievance, AIAnalysis, HumanDecision, StatusHistory, User
 )
 
 
@@ -69,6 +69,7 @@ def create_grievance(
     course_code: Optional[str] = None,
     event_name: Optional[str] = None,
     contact_no: Optional[str] = None,
+    created_by: str = "system",
     commit: bool = True,
 ) -> Grievance:
     # Ensure uniqueness of grievance_id
@@ -91,6 +92,12 @@ def create_grievance(
         status="submitted",
     )
     db.add(grievance)
+    db.add(StatusHistory(
+        grievance_id=gid,
+        previous_status=None,
+        new_status="submitted",
+        changed_by=created_by,
+    ))
     db.commit() if commit else db.flush()
     db.refresh(grievance)
     return grievance
@@ -124,12 +131,23 @@ def get_all_grievances(db: Session, skip: int = 0, limit: int = 200) -> list:
 
 
 def update_grievance_status(
-    db: Session, grievance_id: str, status: str, commit: bool = True
+    db: Session,
+    grievance_id: str,
+    status: str,
+    changed_by: str = "system",
+    commit: bool = True,
 ) -> Optional[Grievance]:
     grievance = get_grievance_by_id(db, grievance_id)
-    if grievance:
+    if grievance and grievance.status != status:
+        previous_status = grievance.status
         grievance.status = status
         grievance.updated_at = datetime.utcnow()
+        db.add(StatusHistory(
+            grievance_id=grievance_id,
+            previous_status=previous_status,
+            new_status=status,
+            changed_by=changed_by,
+        ))
         db.commit() if commit else db.flush()
         db.refresh(grievance)
     return grievance
@@ -189,20 +207,17 @@ def save_human_decision(
         .filter(HumanDecision.grievance_id == grievance_id)
         .first()
     )
-    if existing:
-        db.delete(existing)
-        db.flush()
-
-    hd = HumanDecision(
-        grievance_id=grievance_id,
-        decided_by=decision.get("decided_by", "system"),
-        final_category=decision.get("final_category"),
-        final_subcategory=decision.get("final_subcategory"),
-        final_route=decision.get("final_route"),
-        final_priority=decision.get("final_priority"),
-        decision_notes=decision.get("decision_notes"),
-    )
-    db.add(hd)
+    hd = existing or HumanDecision(grievance_id=grievance_id)
+    hd.decided_by = decision.get("decided_by", "system")
+    hd.final_category = decision.get("final_category")
+    hd.final_subcategory = decision.get("final_subcategory")
+    hd.final_route = decision.get("final_route")
+    hd.final_priority = decision.get("final_priority")
+    hd.decision_notes = decision.get("decision_notes")
+    hd.resolution_solution = decision.get("resolution_solution")
+    hd.decided_at = datetime.utcnow()
+    if existing is None:
+        db.add(hd)
     db.commit() if commit else db.flush()
     db.refresh(hd)
     return hd

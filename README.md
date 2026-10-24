@@ -23,6 +23,23 @@ exceptions and human review visible so the resulting
 workflow remains understandable and accountable in
 practical use.
 
+## Staff grievance resolution
+
+Faculty can read grievances routed to their provisioned department. Staff can
+review and resolve grievances routed to their provisioned department, while
+administrators retain cross-department access. Department queue and decision
+permissions are enforced by the API; a user's `department` is provisioned on
+their `users` record and is never accepted from public registration.
+
+The staff dashboard keeps triage suggestions separate from human decisions,
+records reviewer notes and resolution solutions, and appends each status
+transition to the status history. Bulk actions require a solution and explicit
+approval for every selected grievance. Draft generation is an explicit,
+non-persisting action that uses stored triage category/route context to prepare
+editable response text. Sensitive-flagged cases are rejected by the backend
+and must be handled by a human. Drafts are never sent or used to resolve a case
+without an individually approved staff decision.
+
 ## Run locally
 
 From the repository root, install the Python dependencies, train the

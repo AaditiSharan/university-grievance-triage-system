@@ -5,6 +5,8 @@ import type {
   Grievance,
   StatsResponse,
   HumanDecisionPayload,
+  DraftResponse,
+  BulkDecisionItem,
 } from '../types';
 
 /** Submit a new grievance / query / request / feedback. */
@@ -47,4 +49,42 @@ export async function submitHumanDecision(
 export async function getAdminStats(): Promise<StatsResponse> {
   const response = await apiClient.get<StatsResponse>('/rms/admin/stats');
   return response.data;
+}
+
+/** Faculty may read their department queue; staff and admins may also manage it. */
+export async function getStaffGrievances(): Promise<Grievance[]> {
+  const response = await apiClient.get<Grievance[]>('/rms/staff/grievances');
+  return response.data;
+}
+
+export async function getStaffStats(): Promise<Pick<StatsResponse, 'total' | 'by_status' | 'pending_review' | 'sensitive_count'>> {
+  const response = await apiClient.get('/rms/staff/stats');
+  return response.data;
+}
+
+export async function submitStaffDecision(
+  grievance_id: string,
+  payload: HumanDecisionPayload
+): Promise<Grievance> {
+  const response = await apiClient.post<Grievance>(
+    `/rms/staff/review/${encodeURIComponent(grievance_id)}`,
+    payload
+  );
+  return response.data;
+}
+
+export async function requestResolutionDrafts(grievance_ids: string[]): Promise<DraftResponse[]> {
+  const response = await apiClient.post<{ drafts: DraftResponse[]; saved_or_sent: boolean }>(
+    '/rms/staff/draft-resolutions',
+    { grievance_ids }
+  );
+  return response.data.drafts;
+}
+
+export async function submitBulkStaffDecisions(items: BulkDecisionItem[]): Promise<Grievance[]> {
+  const response = await apiClient.post<{ updated: Grievance[]; count: number }>(
+    '/rms/staff/bulk-review',
+    { items }
+  );
+  return response.data.updated;
 }
