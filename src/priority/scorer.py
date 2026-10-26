@@ -8,6 +8,8 @@ from pathlib import Path
 
 import yaml
 
+from src.rules.sensitivity_engine import HARD_SENSITIVITY_TYPES
+
 BASE_DIR = Path(__file__).parent.parent.parent
 
 _settings_cache: dict | None = None
@@ -32,10 +34,19 @@ def compute_priority(
     Compute an overall priority label and numeric score.
 
     Priority rules (highest-wins):
-    - P1: sensitivity_type in SAFETY | MENTAL_HEALTH | MEDICAL
-    - P2: urgent_deadline=True, OR (low_confidence AND is_sensitive)
-    - P3: normal valid submission
-    - P4: enquiries/feedback, Feedback/Suggestions category, OR incomplete description
+    - P1: a sensitivity rule fired with priority_override "P1", or the
+          sensitivity_type is one of HARD_SENSITIVITY_TYPES
+    - P2: urgent_deadline=True (score 5 reaches the P2 threshold)
+    - P3: everything else, including incomplete descriptions and low
+          classifier confidence. These only add a little to the score and
+          are sent for human review / a request for more information; they
+          are never P4. This matches the labelled dataset.
+    - P4: a complete enquiry / feedback message, or a confidently predicted
+          "Feedback & Suggestions" category
+
+    ``urgent_deadline`` is an explicit flag (the checkbox on the submit form).
+    This function does not read ``sensitivity_result["deadline_detected"]``;
+    the caller must merge it in, as ``src.pipeline`` does.
 
     Returns
     -------
@@ -69,7 +80,7 @@ def compute_priority(
         }
 
     # Score accumulation
-    if is_sensitive and sensitivity_type in ("SAFETY", "MENTAL_HEALTH", "MEDICAL"):
+    if is_sensitive and sensitivity_type in HARD_SENSITIVITY_TYPES:
         score += weights.get("sensitive", 10)
         reasons.append(f"Sensitive content detected ({sensitivity_type}).")
 

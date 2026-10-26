@@ -238,7 +238,10 @@ def test_deadline_is_priority_not_sensitivity() -> None:
         {
             "description": (
                 "The fee deadline is tomorrow due to a delayed loan payment."
-            )
+            ),
+            # Deadlines are declared by the student (checkbox on the submit
+            # form); the sensitivity rules have no DEADLINE rule.
+            "urgent_deadline": True,
         }
     )
     assert result["sensitivity_flag"] is False

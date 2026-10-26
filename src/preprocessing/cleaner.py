@@ -82,6 +82,11 @@ def _apply_hinglish_map(text: str) -> str:
     return re.sub(pattern, lambda match: HINGLISH_MAP[match.group(0)], text)
 
 
+def translate_hinglish(text: str) -> str:
+    """Public wrapper: replace known Hinglish tokens with their English equivalents."""
+    return _apply_hinglish_map(text)
+
+
 def clean_text(text: str) -> str:
     """
     Normalise raw grievance text:
