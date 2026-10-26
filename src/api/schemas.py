@@ -66,6 +66,7 @@ class UserResponse(BaseModel):
     username: str
     email: str
     role: str
+    department: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -172,6 +173,7 @@ class HumanDecisionSubmit(BaseModel):
     final_route: Optional[str] = Field(default=None, max_length=120)
     final_priority: Optional[str] = Field(default=None, pattern=r"^P[1-4]$")
     decision_notes: Optional[str] = Field(default=None, max_length=4000)
+    resolution_solution: Optional[str] = Field(default=None, max_length=10000)
     new_status: str = "under_review"
 
     @field_validator("new_status")
@@ -194,6 +196,7 @@ class HumanDecisionResponse(BaseModel):
     final_route: Optional[str] = None
     final_priority: Optional[str] = None
     decision_notes: Optional[str] = None
+    resolution_solution: Optional[str] = None
     decided_at: datetime
 
     model_config = {"from_attributes": True}
@@ -218,6 +221,36 @@ class StatsResponse(BaseModel):
     by_master_category: dict = Field(default_factory=dict)
     pending_review: int
     sensitive_count: int = 0
+
+
+class DraftRequest(BaseModel):
+    grievance_ids: list[str] = Field(min_length=1, max_length=50)
+
+    @field_validator("grievance_ids")
+    @classmethod
+    def require_unique_grievances(cls, value: list[str]) -> list[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("Each grievance may be drafted only once per request.")
+        return value
+
+
+class BulkDecisionItem(HumanDecisionSubmit):
+    grievance_id: str = Field(min_length=1, max_length=30)
+    approved: bool
+
+
+class BulkDecisionSubmit(BaseModel):
+    items: list[BulkDecisionItem] = Field(min_length=1, max_length=50)
+
+    @field_validator("items")
+    @classmethod
+    def require_unique_approved_items(cls, value: list[BulkDecisionItem]) -> list[BulkDecisionItem]:
+        ids = [item.grievance_id for item in value]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Each grievance may appear only once in a bulk action.")
+        if any(not item.approved for item in value):
+            raise ValueError("Every case must be individually approved before saving.")
+        return value
 
 
 # ---------------------------------------------------------------------------

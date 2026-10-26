@@ -20,6 +20,7 @@ class User(Base):
     hashed_password = Column(String(200), nullable=False)
     # role: student | faculty | staff | admin
     role = Column(String(20), nullable=False, default="student")
+    department = Column(String(120), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     grievances = relationship("Grievance", back_populates="user")
@@ -57,6 +58,9 @@ class Grievance(Base):
         "HumanDecision", back_populates="grievance", uselist=False
     )
     audit_logs = relationship("AuditLog", back_populates="grievance")
+    status_history = relationship(
+        "StatusHistory", back_populates="grievance", order_by="StatusHistory.changed_at"
+    )
 
 
 class AIAnalysis(Base):
@@ -114,6 +118,7 @@ class HumanDecision(Base):
     final_route = Column(String(120), nullable=True)
     final_priority = Column(String(5), nullable=True)
     decision_notes = Column(Text, nullable=True)
+    resolution_solution = Column(Text, nullable=True)
     decided_at = Column(DateTime, default=datetime.utcnow)
 
     grievance = relationship("Grievance", back_populates="human_decision")
@@ -133,3 +138,19 @@ class AuditLog(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     grievance = relationship("Grievance", back_populates="audit_logs")
+
+
+class StatusHistory(Base):
+    """Append-only lifecycle history for grievance status changes."""
+    __tablename__ = "status_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    grievance_id = Column(
+        String(30), ForeignKey("grievances.grievance_id"), nullable=False
+    )
+    previous_status = Column(String(30), nullable=True)
+    new_status = Column(String(30), nullable=False)
+    changed_by = Column(String(50), nullable=False)
+    changed_at = Column(DateTime, default=datetime.utcnow)
+
+    grievance = relationship("Grievance", back_populates="status_history")

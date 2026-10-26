@@ -12,7 +12,7 @@ def _decode_details(value: str | None) -> dict[str, Any]:
     return decoded if isinstance(decoded, dict) else {}
 
 
-def serialize_grievance(grievance: Grievance) -> dict[str, Any]:
+def serialize_grievance(grievance: Grievance, *, include_audit: bool = False) -> dict[str, Any]:
     analysis = grievance.ai_analysis
     details = _decode_details(analysis.analysis_details if analysis else None)
     if analysis and not details:
@@ -58,6 +58,26 @@ def serialize_grievance(grievance: Grievance) -> dict[str, Any]:
             "final_route": decision.final_route,
             "final_priority": decision.final_priority,
             "decision_notes": decision.decision_notes,
+            "resolution_solution": decision.resolution_solution,
             "decided_at": decision.decided_at,
         }
+    result["status_history"] = [
+        {
+            "previous_status": event.previous_status,
+            "new_status": event.new_status,
+            "changed_by": event.changed_by,
+            "changed_at": event.changed_at,
+        }
+        for event in grievance.status_history
+    ]
+    if include_audit:
+        result["audit_events"] = [
+            {
+                "action": event.action,
+                "actor": event.actor,
+                "details": _decode_details(event.details),
+                "timestamp": event.timestamp,
+            }
+            for event in grievance.audit_logs
+        ]
     return result
