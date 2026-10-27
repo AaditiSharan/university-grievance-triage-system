@@ -17,9 +17,15 @@ router = APIRouter(prefix="/rms/staff", tags=["staff"])
 def _can_view(grievance, user: User) -> bool:
     if user.role == "admin":
         return True
-    department = (user.department or "").strip().casefold()
-    routed_to = (grievance.ai_analysis.routed_to or "").strip().casefold() if grievance.ai_analysis else ""
-    return bool(department and routed_to and department == routed_to)
+    department = (user.department or "").strip()
+    routed_to = (grievance.ai_analysis.routed_to or "").strip() if grievance.ai_analysis else ""
+    if not department or not routed_to:
+        return False
+    return department.casefold() == routed_to.casefold()
+
+
+def _unassigned_queue_allowed(user: User) -> bool:
+    return user.role in {"staff", "faculty", "admin"} and not (user.department or "").strip()
 
 
 def _require_staff(user: User) -> None:
@@ -31,9 +37,13 @@ def _get_authorized_grievance(db: Session, grievance_id: str, user: User):
     grievance = crud.get_grievance_by_id(db, grievance_id)
     if grievance is None:
         raise HTTPException(status_code=404, detail="Grievance not found.")
-    if not _can_view(grievance, user):
-        raise HTTPException(status_code=403, detail="This grievance is outside your authorized department.")
-    return grievance
+    if user.role == "admin":
+        return grievance
+    if _can_view(grievance, user):
+        return grievance
+    if _unassigned_queue_allowed(user) and not (grievance.ai_analysis and grievance.ai_analysis.routed_to):
+        return grievance
+    raise HTTPException(status_code=403, detail="This grievance is outside your authorized department.")
 
 
 def _save_decision(db: Session, grievance, payload: HumanDecisionSubmit, user: User) -> None:
@@ -86,10 +96,11 @@ def list_department_grievances(
     if user.role not in {"faculty", "staff", "admin"}:
         raise HTTPException(status_code=403, detail="Faculty or staff access is required.")
     grievances = crud.get_all_grievances(db, limit=1000)
-    return [
-        serialize_grievance(item, include_audit=True)
-        for item in grievances if _can_view(item, user)
+    visible = [
+        item for item in grievances
+        if _can_view(item, user) or (_unassigned_queue_allowed(user) and not (item.ai_analysis and item.ai_analysis.routed_to))
     ]
+    return [serialize_grievance(item, include_audit=True) for item in visible]
 
 
 @router.get("/stats")
@@ -101,7 +112,7 @@ def department_stats(
         raise HTTPException(status_code=403, detail="Faculty or staff access is required.")
     grievances = [
         item for item in crud.get_all_grievances(db, limit=1000)
-        if _can_view(item, user)
+        if _can_view(item, user) or (_unassigned_queue_allowed(user) and not (item.ai_analysis and item.ai_analysis.routed_to))
     ]
     return {
         "total": len(grievances),

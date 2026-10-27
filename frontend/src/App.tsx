@@ -110,6 +110,8 @@ function AppRoutes() {
           />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/staff/login" element={<Login staffFlow />} />
+          <Route path="/staff/register" element={<Register staffFlow />} />
           <Route
             path="/submit"
             element={

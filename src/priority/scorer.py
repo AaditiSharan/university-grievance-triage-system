@@ -96,6 +96,8 @@ def compute_priority(
         score += weights.get("incomplete", 1)
         issues = completeness_result.get("issues", [])
         reasons.append(f"Incomplete submission: {'; '.join(issues)}")
+    elif urgent_deadline and not is_sensitive:
+        score = max(score, weights.get("urgent_deadline", 5))
 
     # Map score → label
     if score >= weights.get("sensitive", 10):

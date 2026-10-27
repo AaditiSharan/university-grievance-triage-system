@@ -1,3 +1,4 @@
+
 """
 Sensitivity engine for UniResolve AI.
 
@@ -452,5 +453,16 @@ def check_sensitivity(text: str) -> dict:
                 f"Rule {flag['rule'].get('id')} ({flag['rule'].get('name')}): "
                 f"matched keywords {flag['matched_keywords']}"
             )
+
+    # Detect deadline context even when no configured DEADLINE rule matches.
+    deadline_pattern = re.compile(
+        r"\b(?:deadline|due(?:\s+date)?|due\s+by|by\s+(?:today|tomorrow|this\s+week|next\s+week)|tomorrow|today|before\s+(?:end\s+of\s+day|5\s*pm|6\s*pm|11\s*:\s*59\s*(?:pm|am)))\b",
+        re.IGNORECASE,
+    )
+    if not result["deadline_detected"] and deadline_pattern.search(text_norm):
+        result["deadline_detected"] = True
+        result["evidence"].append(
+            "Deadline context detected; urgency considered without sensitivity escalation."
+        )
 
     return result

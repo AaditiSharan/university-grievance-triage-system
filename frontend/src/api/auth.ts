@@ -19,17 +19,24 @@ export async function login(username: string, password: string): Promise<LoginRe
 /**
  * Register a new user account.
  */
+export async function getDepartments(): Promise<string[]> {
+  const response = await apiClient.get<{ departments: string[] }>('/auth/departments');
+  return response.data.departments ?? [];
+}
+
 export async function register(
   username: string,
   email: string,
   password: string,
-  role: 'student' | 'faculty' | 'staff'
+  role: 'student' | 'faculty' | 'staff',
+  department?: string
 ): Promise<User> {
   const response = await apiClient.post<User>('/auth/register', {
     username,
     email,
     password,
     role,
+    department,
   });
   return response.data;
 }
