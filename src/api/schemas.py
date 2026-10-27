@@ -6,6 +6,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.auth.security import is_valid_department_name
+
 
 # ---------------------------------------------------------------------------
 # Auth
@@ -16,6 +18,7 @@ class UserCreate(BaseModel):
     email: str = Field(min_length=3, max_length=120)
     password: str = Field(min_length=6, max_length=72)
     role: str = "student"
+    department: Optional[str] = None
 
     @field_validator("username")
     @classmethod
@@ -43,10 +46,19 @@ class UserCreate(BaseModel):
     @field_validator("role")
     @classmethod
     def validate_role(cls, v: str) -> str:
+        normalized = (v or "student").strip().lower()
         allowed = {"student", "faculty", "staff", "admin"}
-        if v not in allowed:
+        if normalized not in allowed:
             raise ValueError(f"role must be one of {allowed}")
-        return v
+        return normalized
+
+    @field_validator("department")
+    @classmethod
+    def validate_department(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
 
 
 class UserLogin(BaseModel):

@@ -56,6 +56,71 @@ def register_and_login(client: TestClient, username: str, email: str) -> str:
     return login_response.json()["access_token"]
 
 
+def test_staff_registration_requires_allowlisted_domain_and_known_department(
+    api: tuple[TestClient, sessionmaker],
+) -> None:
+    client, _ = api
+    catalog = client.get("/api/auth/departments")
+    assert catalog.status_code == 200, catalog.text
+    assert "IT Services" in catalog.json()["departments"]
+    assert "Academic Operations" in catalog.json()["departments"]
+
+    invalid_domain = client.post(
+        "/api/auth/register",
+        json={
+            "username": "outside-staff",
+            "email": "outside@external.org",
+            "password": "test-password-123",
+            "role": "staff",
+            "department": "IT Services",
+        },
+    )
+    assert invalid_domain.status_code == 403
+
+    invalid_department = client.post(
+        "/api/auth/register",
+        json={
+            "username": "bad-dept-staff",
+            "email": "staff@university.edu",
+            "password": "test-password-123",
+            "role": "staff",
+            "department": "Unknown Office",
+        },
+    )
+    assert invalid_department.status_code == 403
+
+    missing_department = client.post(
+        "/api/auth/register",
+        json={
+            "username": "no-dept-staff",
+            "email": "staff2@university.edu",
+            "password": "test-password-123",
+            "role": "staff",
+        },
+    )
+    assert missing_department.status_code == 403
+
+    valid_staff = client.post(
+        "/api/auth/register",
+        json={
+            "username": "dept-staff",
+            "email": "staff3@university.edu",
+            "password": "test-password-123",
+            "role": "staff",
+            "department": "IT Services",
+        },
+    )
+    assert valid_staff.status_code == 201, valid_staff.text
+    assert valid_staff.json()["department"] == "IT Services"
+
+    login_response = client.post(
+        "/api/auth/login",
+        data={"username": "dept-staff", "password": "test-password-123"},
+    )
+    assert login_response.status_code == 200, login_response.text
+    assert login_response.json()["role"] == "staff"
+
+
 def test_grievance_submission_tracking_and_human_review(api: tuple[TestClient, sessionmaker]) -> None:
     client, sessions = api
     student_token = register_and_login(client, "student-one", "student@example.edu")

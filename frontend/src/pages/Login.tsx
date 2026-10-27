@@ -4,7 +4,11 @@ import { GraduationCap, AlertCircle, Loader2 } from 'lucide-react';
 import { login as apiLogin, getMe } from '../api/auth.ts';
 import { useAuth } from '../auth/AuthContext.tsx';
 
-export default function Login() {
+type LoginProps = {
+  staffFlow?: boolean;
+};
+
+export default function Login({ staffFlow = false }: LoginProps) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,12 +59,16 @@ export default function Login() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900">UniResolve AI</h1>
-          <p className="mt-2 text-gray-500">University Grievance & Resolution Portal</p>
+          <p className="mt-2 text-gray-500">
+            {staffFlow ? 'Staff and faculty access portal' : 'University Grievance & Resolution Portal'}
+          </p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Sign in to your account</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">
+            {staffFlow ? 'Staff sign in' : 'Sign in to your account'}
+          </h2>
 
           {error && (
             <div className="mb-4 flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -119,9 +127,12 @@ export default function Login() {
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-500">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-indigo-600 font-medium hover:underline">
-              Register here
+            {staffFlow ? 'Need a staff account?' : "Don't have an account?"}{' '}
+            <Link
+              to={staffFlow ? '/staff/register' : '/register'}
+              className="text-indigo-600 font-medium hover:underline"
+            >
+              {staffFlow ? 'Create staff account' : 'Register here'}
             </Link>
           </p>
         </div>

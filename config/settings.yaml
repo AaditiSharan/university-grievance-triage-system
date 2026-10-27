@@ -23,3 +23,8 @@ priority:
 
 database:
   url: sqlite:///./grievances.db
+
+auth:
+  staff_email_domains:
+    - example.edu
+    - university.edu

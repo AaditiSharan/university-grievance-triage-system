@@ -62,9 +62,12 @@ npm run dev
 ```
 
 The API is available at `http://localhost:8000/api`, and the frontend at
-`http://localhost:5173`. Register a user through the app. To provision an
-administrator, first register that account, then promote it from the local
-database:
+`http://localhost:5173`. Staff and faculty accounts are allowed to self-register
+only when their email matches the configured institutional domains. Configure
+these domains with the environment variable `STAFF_EMAIL_DOMAINS` (for example,
+`STAFF_EMAIL_DOMAINS=example.edu,university.edu`). Register a user through the
+app. To provision an administrator, first register that account, then promote it
+from the local database:
 
 ```powershell
 python -c "from src.db.connection import SessionLocal; from src.db.models import User; db=SessionLocal(); user=db.query(User).filter_by(username='YOUR_USERNAME').one(); user.role='admin'; db.commit(); db.close()"

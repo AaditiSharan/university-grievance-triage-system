@@ -160,4 +160,12 @@ def check_sensitivity(text: str) -> dict:
             result["route_override"] = rule.get("route")
             result["needs_human_review"] = rule.get("human_review", True)
 
+    deadline_pattern = re.compile(
+        r"\b(?:deadline|due(?:\s+date)?|due\s+by|by\s+(?:today|tomorrow|this\s+week|next\s+week)|tomorrow|today|before\s+(?:end\s+of\s+day|5\s*pm|6\s*pm|11\s*:\s*59\s*(?:pm|am)))\b",
+        re.IGNORECASE,
+    )
+    if not result["is_sensitive"] and deadline_pattern.search(text_lower):
+        result["deadline_detected"] = True
+        result["evidence"].append("Deadline context detected; urgency considered without sensitivity escalation.")
+
     return result

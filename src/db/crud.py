@@ -24,12 +24,14 @@ def create_user(
     email: str,
     hashed_password: str,
     role: str = "student",
+    department: Optional[str] = None,
 ) -> User:
     user = User(
         username=username,
         email=email,
         hashed_password=hashed_password,
         role=role,
+        department=department,
     )
     db.add(user)
     db.commit()
