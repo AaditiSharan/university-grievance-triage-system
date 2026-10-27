@@ -102,7 +102,7 @@ function priorityBadge(label: string) {
 
 function sensitivityBannerColor(type: string): string {
   const upper = type?.toUpperCase() ?? '';
-  if (upper.includes('SAFETY') || upper.includes('MENTAL') || upper.includes('RAGGING') || upper.includes('VIOLENCE')) {
+    if (upper.includes('SAFETY') || upper.includes('WELFARE') || upper.includes('MEDICAL') || upper.includes('MENTAL') || upper.includes('RAGGING') || upper.includes('VIOLENCE')) {
     return 'bg-red-50 border-red-300 text-red-800';
   }
   if (upper.includes('DEADLINE') || upper.includes('CONFIDENTIAL') || upper.includes('HARASSMENT')) {

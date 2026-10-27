@@ -1,4 +1,3 @@
-
 """FastAPI application for UniResolve AI."""
 import os
 
@@ -7,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routers import admin, auth, rms, staff
 from src.db.connection import create_tables
+from src.rules.sensitivity_engine import load_config as load_sensitivity_config
 
 app = FastAPI(
     title="UniResolve AI API",
@@ -35,6 +35,8 @@ app.include_router(staff.router, prefix="/api")
 @app.on_event("startup")
 def initialize_database() -> None:
     create_tables()
+    # Refuse to start with an invalid rules file instead of failing on a student's submission.
+    load_sensitivity_config()
 
 
 @app.get("/api/health", tags=["health"])
