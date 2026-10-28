@@ -79,7 +79,7 @@ def track_grievance(
         raise HTTPException(status_code=404, detail="Grievance not found.")
     if grievance.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="You may only track your own submissions.")
-    return serialize_grievance(grievance)
+    return serialize_grievance(grievance, student_view=True)
 
 
 @router.get("/my-grievances")
@@ -88,6 +88,6 @@ def my_grievances(
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
     return [
-        serialize_grievance(grievance)
+        serialize_grievance(grievance, student_view=True)
         for grievance in crud.get_grievances_by_user(db, current_user.id)
     ]

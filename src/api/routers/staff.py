@@ -47,6 +47,11 @@ def _get_authorized_grievance(db: Session, grievance_id: str, user: User):
 
 
 def _save_decision(db: Session, grievance, payload: HumanDecisionSubmit, user: User) -> None:
+    if grievance.status in {"resolved", "closed"}:
+        raise HTTPException(
+            status_code=409,
+            detail="A decision cannot be changed after a grievance is resolved or closed.",
+        )
     if payload.new_status in {"resolved", "closed"} and not (payload.resolution_solution or "").strip():
         raise HTTPException(
             status_code=422,
@@ -180,6 +185,9 @@ def review_grievance(
     try:
         _save_decision(db, grievance, payload, user)
         db.commit()
+    except crud.FinalizedDecisionError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception:
         db.rollback()
         raise
@@ -202,6 +210,9 @@ def bulk_review(
         for grievance, item in zip(grievances, payload.items):
             _save_decision(db, grievance, item, user)
         db.commit()
+    except crud.FinalizedDecisionError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception:
         db.rollback()
         raise

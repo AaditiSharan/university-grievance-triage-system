@@ -90,12 +90,12 @@ export interface AuditEvent {
 export interface StatusHistoryEntry {
   previous_status?: string | null;
   new_status: string;
-  changed_by: string;
+  changed_by?: string;
   changed_at: string;
 }
 
 export interface HumanDecision {
-  decided_by: string;
+  decided_by?: string;
   final_category?: string;
   final_subcategory?: string;
   final_route?: string;

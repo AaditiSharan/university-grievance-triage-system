@@ -233,6 +233,17 @@ export default function Track() {
             </p>
           </div>
 
+          <section className="mb-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
+            <h2 className="text-sm font-semibold text-purple-800">Resolution from Staff</h2>
+            {grievance.human_decision?.resolution_solution?.trim() ? (
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-purple-900">
+                {grievance.human_decision.resolution_solution}
+              </p>
+            ) : grievance.status !== 'resolved' && grievance.status !== 'closed' ? (
+              <p className="mt-2 text-sm text-purple-700">Awaiting staff resolution</p>
+            ) : null}
+          </section>
+
           {/* Human Decision */}
           {grievance.human_decision && (
             <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
