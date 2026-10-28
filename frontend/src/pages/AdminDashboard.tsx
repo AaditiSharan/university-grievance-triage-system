@@ -22,6 +22,10 @@ function isSensitive(analysis: Grievance['ai_analysis']): boolean {
     || Boolean(analysis?.sensitivity_type && analysis.sensitivity_type.toUpperCase() !== 'NONE');
 }
 
+function isFinalized(grievance: Grievance): boolean {
+  return grievance.status === 'resolved' || grievance.status === 'closed';
+}
+
 export default function AdminDashboard() {
   const [grievances, setGrievances] = useState<Grievance[]>([]);
   const [stats, setStats] = useState<{
@@ -56,6 +60,10 @@ export default function AdminDashboard() {
   const hasSensitiveBulkSelection = selectedIds.some((id) => {
     const analysis = grievances.find((item) => item.grievance_id === id)?.ai_analysis;
     return isSensitive(analysis);
+  });
+  const eligibleSelectedIds = selectedIds.filter((id) => {
+    const grievance = grievances.find((item) => item.grievance_id === id);
+    return grievance && !isFinalized(grievance);
   });
 
   const loadDashboard = useCallback(async () => {
@@ -115,6 +123,9 @@ export default function AdminDashboard() {
       setGrievances((current) => current.map((item) => (
         item.grievance_id === updated.grievance_id ? updated : item
       )));
+      if (isFinalized(updated)) {
+        setSelectedIds((current) => current.filter((id) => id !== updated.grievance_id));
+      }
       setNotice('Human review decision saved. AI recommendations remain unchanged.');
       const updatedStats = await getStaffStats();
       setStats(updatedStats);
@@ -152,7 +163,7 @@ export default function AdminDashboard() {
   };
 
   const handleBulkReview = async () => {
-    const items: BulkDecisionItem[] = selectedIds.map((id) => {
+    const items: BulkDecisionItem[] = eligibleSelectedIds.map((id) => {
       const grievance = grievances.find((item) => item.grievance_id === id);
       return {
         grievance_id: id,
@@ -166,7 +177,7 @@ export default function AdminDashboard() {
         approved: Boolean(bulkApprovals[id]),
       };
     });
-    if (items.some((item) => !item.approved || !item.resolution_solution?.trim())) {
+    if (items.length === 0 || items.some((item) => !item.approved || !item.resolution_solution?.trim())) {
       setError('Review and approve an individual solution for every selected grievance before applying the bulk action.');
       return;
     }
@@ -247,7 +258,7 @@ export default function AdminDashboard() {
                 return (
                   <div key={grievance.grievance_id} className={`rounded-lg border p-3 ${active ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200'}`}>
                     <div className="flex items-center gap-2">
-                      {canManage && <input
+                      {canManage && !isFinalized(grievance) && <input
                         aria-label={`Select ${grievance.grievance_id} for bulk resolution`}
                         type="checkbox"
                         checked={selectedIds.includes(grievance.grievance_id)}
@@ -271,14 +282,14 @@ export default function AdminDashboard() {
               })}
             </div>
           )}
-          {canManage && selectedIds.length > 0 && (
+          {canManage && eligibleSelectedIds.length > 0 && (
             <div className="mt-4 border-t border-gray-200 pt-4">
-              <h3 className="font-semibold">Bulk resolution ({selectedIds.length})</h3>
+              <h3 className="font-semibold">Bulk resolution ({eligibleSelectedIds.length})</h3>
               <p className="mt-1 text-xs text-gray-500">Drafts are never sent automatically. Review and approve each case below.</p>
               {hasSensitiveBulkSelection && <p role="alert" className="mt-2 text-xs text-red-700">Sensitive cases cannot receive AI-assisted drafts. Handle them directly as a human reviewer.</p>}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" disabled={saving || hasSensitiveBulkSelection} onClick={() => void handleDrafts()} className="btn-secondary">Draft non-sensitive responses</button>
-                <button type="button" onClick={() => setBulkSolutions(Object.fromEntries(selectedIds.map((id) => [id, resolutionSolution])))} className="btn-secondary">Apply staff solution</button>
+                <button type="button" onClick={() => setBulkSolutions(Object.fromEntries(eligibleSelectedIds.map((id) => [id, resolutionSolution])))} className="btn-secondary">Apply staff solution</button>
               </div>
               <label className="mt-3 block text-sm">Bulk status
                 <select className="input-field mt-1" value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as HumanDecisionPayload['new_status'])}>
@@ -286,7 +297,7 @@ export default function AdminDashboard() {
                 </select>
               </label>
               <div className="mt-3 space-y-3">
-                {selectedIds.map((id) => (
+                {eligibleSelectedIds.map((id) => (
                   <div key={id} className="rounded-lg bg-gray-50 p-3">
                     <label className="block text-sm font-medium">{id} — individual solution
                       <textarea className="input-field mt-1 min-h-20" value={bulkSolutions[id] ?? ''} onChange={(event) => {
@@ -339,7 +350,7 @@ export default function AdminDashboard() {
                 )}
               </article>
 
-              {canManage ? <form className="card space-y-4" onSubmit={handleReview}>
+              {canManage && !isFinalized(selected) ? <form className="card space-y-4" onSubmit={handleReview}>
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">Human decision</h2>
                   <p className="mt-1 text-xs text-gray-500">Fields are prefilled with AI suggestions for convenience; confirm or edit them before saving.</p>
@@ -385,7 +396,16 @@ export default function AdminDashboard() {
               </form> : (
                 <article className="card">
                   <h2 className="text-lg font-semibold">Human decision</h2>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{selected.human_decision?.decision_notes || 'No reviewer notes recorded.'}</p>
+                  <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                    <div><dt className="text-gray-500">Final category</dt><dd className="font-medium text-gray-800">{selected.human_decision?.final_category || 'Not recorded'}</dd></div>
+                    <div><dt className="text-gray-500">Final subcategory</dt><dd className="font-medium text-gray-800">{selected.human_decision?.final_subcategory || 'Not recorded'}</dd></div>
+                    <div><dt className="text-gray-500">Department / route</dt><dd className="font-medium text-gray-800">{selected.human_decision?.final_route || 'Not recorded'}</dd></div>
+                    <div><dt className="text-gray-500">Final priority</dt><dd className="font-medium text-gray-800">{selected.human_decision?.final_priority || 'Not recorded'}</dd></div>
+                    <div><dt className="text-gray-500">Status</dt><dd className="font-medium text-gray-800">{selected.status.replace(/_/g, ' ')}</dd></div>
+                    <div><dt className="text-gray-500">Resolution time</dt><dd className="font-medium text-gray-800">{selected.human_decision?.decided_at ? new Date(selected.human_decision.decided_at).toLocaleString() : 'Not recorded'}</dd></div>
+                  </dl>
+                  <h3 className="mt-4 text-sm font-semibold">Reviewer notes</h3>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{selected.human_decision?.decision_notes || 'No reviewer notes recorded.'}</p>
                   <h3 className="mt-4 text-sm font-semibold">Resolution</h3>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{selected.human_decision?.resolution_solution || 'No resolution recorded.'}</p>
                 </article>

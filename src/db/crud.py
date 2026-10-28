@@ -14,6 +14,10 @@ from src.db.models import (
 )
 
 
+class FinalizedDecisionError(ValueError):
+    """Raised when a decision is submitted for a resolved or closed grievance."""
+
+
 # ---------------------------------------------------------------------------
 # Users
 # ---------------------------------------------------------------------------
@@ -204,6 +208,11 @@ def save_ai_analysis(
 def save_human_decision(
     db: Session, grievance_id: str, decision: dict, commit: bool = True
 ) -> HumanDecision:
+    grievance = get_grievance_by_id(db, grievance_id)
+    if grievance and grievance.status in {"resolved", "closed"}:
+        raise FinalizedDecisionError(
+            "A decision cannot be changed after a grievance is resolved or closed."
+        )
     existing = (
         db.query(HumanDecision)
         .filter(HumanDecision.grievance_id == grievance_id)

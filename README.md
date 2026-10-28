@@ -33,7 +33,11 @@ their `users` record and is never accepted from public registration.
 
 The staff dashboard keeps triage suggestions separate from human decisions,
 records reviewer notes and resolution solutions, and appends each status
-transition to the status history. Bulk actions require a solution and explicit
+transition to the status history. Resolved and closed grievances are read-only
+through the normal review workflow; reopening requires a separate authorized
+workflow, which is not currently provided. Students can see their saved staff
+resolution on both tracking and submissions views, but not reviewer notes or
+internal audit details. Bulk actions require a solution and explicit
 approval for every selected grievance. Draft generation is an explicit,
 non-persisting action that uses stored triage category/route context to prepare
 editable response text. Sensitive-flagged cases are rejected by the backend

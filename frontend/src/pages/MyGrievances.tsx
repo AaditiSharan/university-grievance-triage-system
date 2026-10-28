@@ -82,6 +82,16 @@ export default function MyGrievances() {
                   </span>
                 </div>
                 <p className="mt-4 text-sm leading-relaxed text-gray-700">{grievance.description}</p>
+                <section className="mt-3 rounded-lg border border-purple-200 bg-purple-50 p-3">
+                  <h2 className="text-sm font-semibold text-purple-800">Resolution from Staff</h2>
+                  {grievance.human_decision?.resolution_solution?.trim() ? (
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-purple-900">
+                      {grievance.human_decision.resolution_solution}
+                    </p>
+                  ) : grievance.status !== 'resolved' && grievance.status !== 'closed' ? (
+                    <p className="mt-2 text-sm text-purple-700">Awaiting staff resolution</p>
+                  ) : null}
+                </section>
                 {analysis && (
                   <div className="mt-4 grid gap-3 border-t border-gray-100 pt-4 sm:grid-cols-3">
                     <div>
@@ -98,14 +108,6 @@ export default function MyGrievances() {
                       <p className="text-xs text-gray-500">Department suggestion</p>
                       <p className="text-sm font-medium text-gray-800">{analysis.routed_to}</p>
                     </div>
-                    {grievance.human_decision && (
-                      <div className="sm:col-span-3 rounded-lg border border-purple-100 bg-purple-50 p-3 text-sm text-purple-800">
-                        Human-reviewed final status: {grievance.status.replace(/_/g, ' ')}
-                        {grievance.human_decision.decision_notes && (
-                          <p className="mt-1">{grievance.human_decision.decision_notes}</p>
-                        )}
-                      </div>
-                    )}
                     <p className="sm:col-span-3 text-xs text-gray-500">
                       AI output is advisory; final handling remains with a human reviewer.
                     </p>
