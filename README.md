@@ -42,106 +42,48 @@ without an individually approved staff decision.
 
 ## Run locally
 
-From the repository root, install the Python dependencies, train the
-TF-IDF/Logistic Regression models on `data/processed/train.csv`, and start the
-API:
+Run locally
 
-```powershell
+Prerequisites: Python 3.10+ (tick "Add Python to PATH" when installing), Node.js 18+ and Git.
+
+From the repository root, create a virtual environment (one time only), activate it, install the Python dependencies, train the TF-IDF/Logistic Regression models on data/processed/train.csv, and start the API:
+
+powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 python -m src.classifier.train
 $env:SECRET_KEY = (python -c "import secrets; print(secrets.token_urlsafe(32))")
 python -m uvicorn src.api.main:app --reload --port 8000
-```
+
+The python -m venv .venv step creates the .venv folder; without it the Activate.ps1 line fails with "term is not recognized". You only run it once. In later sessions, skip it and just activate the environment. Your prompt shows (.venv) when it is active.
+
+On macOS or Linux, activate with source .venv/bin/activate and set the key with export SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))").
+
+If PowerShell says running scripts is disabled, run this once and try again:
+
+powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+
+requirements.txt includes torch and sentence-transformers, which are large downloads and are not used yet. If you only want to run the app, you can remove those two lines before installing.
 
 In another terminal, install and start the React app:
 
-```powershell
+powershell
 cd frontend
 npm install
 npm run dev
-```
 
-The API is available at `http://localhost:8000/api`, and the frontend at
-`http://localhost:5173`. Staff and faculty accounts are allowed to self-register
-only when their email matches the configured institutional domains. Configure
-these domains with the environment variable `STAFF_EMAIL_DOMAINS` (for example,
-`STAFF_EMAIL_DOMAINS=example.edu,university.edu`). Register a user through the
-app. To provision an administrator, first register that account, then promote it
-from the local database:
+The API is available at http://localhost:8000/api, and the frontend at http://localhost:5173. Staff and faculty accounts are allowed to self-register only when their email matches the configured institutional domains. Configure these domains with the environment variable STAFF_EMAIL_DOMAINS (for example, STAFF_EMAIL_DOMAINS=example.edu,university.edu). Register a user through the app. To provision an administrator, first register that account, then promote it from the local database:
 
-```powershell
+powershell
 python -c "from src.db.connection import SessionLocal; from src.db.models import User; db=SessionLocal(); user=db.query(User).filter_by(username='YOUR_USERNAME').one(); user.role='admin'; db.commit(); db.close()"
-```
 
-Training uses the dataset's `true_master` and `true_subcategory` labels as-is,
-including `UNCLEAR`. For a fresh checkout, train before accepting submissions;
-the generated model files are stored under `src/classifier/models/`.
+Training uses the dataset's true_master and true_subcategory labels as-is, including UNCLEAR. For a fresh checkout, train before accepting submissions; the generated model files are stored under src/classifier/models/.
 
-Submissions receive triage suggestions and remain in `submitted` status until
-a reviewer records a human decision in the admin dashboard. Sensitivity,
-priority, routing and incident matches are explanations and recommendations;
-they do not close, resolve or otherwise decide a grievance automatically.
+Submissions receive triage suggestions and remain in submitted status until a reviewer records a human decision in the admin dashboard. Sensitivity, priority, routing and incident matches are explanations and recommendations; they do not close, resolve or otherwise decide a grievance automatically.
 
 Run the API integration and edge-case tests with:
 
-```powershell
+powershell
 python -m pytest -q tests\test_end_to_end.py
-```
-
-## Temporary remote testing with Cloudflare Quick Tunnels
-
-Cloudflare Quick Tunnels provide temporary public URLs; no project dependencies
-need to be installed on the tester's laptop. Install `cloudflared` on the
-computer running this project if it is not already available:
-
-```powershell
-winget install --id Cloudflare.cloudflared --exact
-```
-
-Open four PowerShell terminals from the repository root. Stop any existing
-UniResolve API or Vite dev server first so the updated settings are loaded and
-ports 8000 and 5173 are free. Start the API in the first terminal using the
-project's `.venv-1` environment:
-
-```powershell
-$env:SECRET_KEY = (& .\.venv-1\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(32))")
-& .\.venv-1\Scripts\python.exe -m uvicorn src.api.main:app --host 127.0.0.1 --port 8000
-```
-
-Start a backend tunnel in the second terminal and copy its generated
-`https://….trycloudflare.com` URL:
-
-```powershell
-cloudflared tunnel --url http://127.0.0.1:8000
-```
-
-In the third terminal, set the API URL to that backend URL, then start the
-frontend:
-
-```powershell
-$env:VITE_API_URL = 'https://<backend-tunnel-host>.trycloudflare.com/api'
-Set-Location .\frontend
-npm run dev -- --host 127.0.0.1
-```
-
-Start a frontend tunnel in the fourth terminal and copy its generated URL:
-
-```powershell
-cloudflared tunnel --url http://127.0.0.1:5173
-```
-
-Finally, stop the API with Ctrl+C in the first terminal, set its allowed
-frontend origin to the frontend tunnel URL, and restart it in that same
-terminal. Keep the existing `SECRET_KEY` in that terminal:
-
-```powershell
-$env:FRONTEND_ORIGIN = 'https://<frontend-tunnel-host>.trycloudflare.com'
-& .\.venv-1\Scripts\python.exe -m uvicorn src.api.main:app --host 127.0.0.1 --port 8000
-```
-
-Send the frontend tunnel URL to the tester. They only need a browser; the
-frontend and API continue running on your computer. Quick Tunnel URLs change
-when tunnels are restarted, so update `VITE_API_URL` and `FRONTEND_ORIGIN`
-using the newly generated URLs each time. The API reads `FRONTEND_ORIGIN` when
-it starts, so restart the API after setting or changing it. Treat the URLs as
-public and stop both tunnels when testing is complete.
