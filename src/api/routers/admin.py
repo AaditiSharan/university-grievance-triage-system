@@ -70,6 +70,7 @@ def review_grievance(
     if grievance is None:
         raise HTTPException(status_code=404, detail="Grievance not found.")
     try:
+        previous_decision = grievance.human_decision
         crud.save_human_decision(
             db,
             grievance_id,
@@ -90,7 +91,7 @@ def review_grievance(
         crud.create_audit_log(
             db,
             grievance_id,
-            "HUMAN_REVIEW",
+            "HUMAN_REVIEW_EDITED" if previous_decision else "HUMAN_REVIEW_APPROVED",
             admin.username,
             {
                 "new_status": payload.new_status,
@@ -102,6 +103,9 @@ def review_grievance(
             commit=False,
         )
         db.commit()
+    except crud.FinalizedDecisionError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception:
         db.rollback()
         raise

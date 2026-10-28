@@ -174,6 +174,7 @@ def test_grievance_submission_tracking_and_human_review(api: tuple[TestClient, s
     tracked = client.get(f"/api/rms/track/{grievance_id}", headers=student_headers)
     assert tracked.status_code == 200
     assert tracked.json()["ai_analysis"]["incident_id"] == "INC-08"
+    assert tracked.json()["human_decision"] is None
     assert client.get("/api/rms/my-grievances", headers=student_headers).json()[0][
         "grievance_id"
     ] == grievance_id
@@ -224,7 +225,9 @@ def test_grievance_submission_tracking_and_human_review(api: tuple[TestClient, s
         f"/api/rms/track/{grievance_id}", headers=student_headers
     ).json()
     assert "audit_events" not in student_view_after_review
-    assert student_view_after_review["status_history"][-1]["changed_by"] == "review-admin"
+    assert "changed_by" not in student_view_after_review["status_history"][-1]
+    assert "decided_by" not in student_view_after_review["human_decision"]
+    assert "decision_notes" not in student_view_after_review["human_decision"]
 
     stats = client.get("/api/rms/admin/stats", headers=admin_headers).json()
     assert stats["total"] == 1
@@ -518,6 +521,133 @@ def test_sensitive_grievance_cannot_receive_ai_draft_but_human_review_can_resolv
     assert body["human_decision"]["resolution_solution"].startswith("A staff member")
     assert body["status_history"][-1]["changed_by"] == "safety-staff"
     assert body["audit_events"][-1]["action"] == "HUMAN_REVIEW_APPROVED"
+
+
+def test_staff_decision_is_final_once_and_student_views_expose_saved_resolution(
+    api: tuple[TestClient, sessionmaker],
+) -> None:
+    client, sessions = api
+    student_token = register_and_login(client, "resolution-owner", "resolution-owner@example.edu")
+    student_headers = {"Authorization": f"Bearer {student_token}"}
+    grievance_id = _seed_grievance(sessions)
+    from src.db import crud
+
+    with sessions() as db:
+        owner = crud.get_user_by_username(db, "resolution-owner")
+        grievance = crud.get_grievance_by_id(db, grievance_id)
+        grievance.user_id = owner.id
+        db.commit()
+        submitted_at = grievance.created_at
+
+    staff_token = _provision_account(client, sessions, "resolution-staff", "staff", "IT Services")
+    staff_headers = {"Authorization": f"Bearer {staff_token}"}
+    first_decision = {
+        "final_category": "IT Services",
+        "final_subcategory": "Wi-Fi Not Working",
+        "final_route": "Network Operations",
+        "final_priority": "P2",
+        "decision_notes": "Verified the reported outage.",
+        "resolution_solution": "Network Operations restored service in the affected hostel.",
+        "new_status": "resolved",
+    }
+
+    resolved = client.post(
+        f"/api/rms/staff/review/{grievance_id}",
+        headers=staff_headers,
+        json=first_decision,
+    )
+    assert resolved.status_code == 200, resolved.text
+    decision_at = resolved.json()["human_decision"]["decided_at"]
+    assert resolved.json()["created_at"] == submitted_at.isoformat()
+    assert decision_at != resolved.json()["created_at"]
+    assert resolved.json()["audit_events"][-1]["action"] == "HUMAN_REVIEW_APPROVED"
+
+    second_decision = {
+        **first_decision,
+        "final_subcategory": "Changed after resolution",
+        "resolution_solution": "This replacement must not be stored.",
+        "new_status": "closed",
+    }
+    rejected = client.post(
+        f"/api/rms/staff/review/{grievance_id}",
+        headers=staff_headers,
+        json=second_decision,
+    )
+    assert rejected.status_code == 409
+
+    admin_token = _provision_account(client, sessions, "resolution-admin", "admin")
+    rejected_admin_edit = client.post(
+        f"/api/rms/admin/review/{grievance_id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=second_decision,
+    )
+    assert rejected_admin_edit.status_code == 409
+
+    with sessions() as db:
+        saved = crud.get_grievance_by_id(db, grievance_id)
+        assert saved.created_at == submitted_at
+        assert saved.status == "resolved"
+        assert saved.human_decision.resolution_solution == first_decision["resolution_solution"]
+        assert saved.human_decision.decided_at.isoformat() == decision_at
+        assert len(saved.status_history) == 2
+        assert len(saved.audit_logs) == 1
+
+    tracked = client.get(
+        f"/api/rms/track/{grievance_id}", headers=student_headers
+    )
+    assert tracked.status_code == 200
+    student_decision = tracked.json()["human_decision"]
+    assert student_decision["resolution_solution"] == first_decision["resolution_solution"]
+    assert student_decision["decided_at"] == decision_at
+    assert "decided_by" not in student_decision
+    assert "decision_notes" not in student_decision
+    assert "audit_events" not in tracked.json()
+    assert all("changed_by" not in event for event in tracked.json()["status_history"])
+
+    my_submissions = client.get("/api/rms/my-grievances", headers=student_headers)
+    assert my_submissions.status_code == 200
+    assert my_submissions.json()[0]["human_decision"]["resolution_solution"] == first_decision[
+        "resolution_solution"
+    ]
+
+    another_token = register_and_login(client, "resolution-other", "resolution-other@example.edu")
+    denied = client.get(
+        f"/api/rms/track/{grievance_id}",
+        headers={"Authorization": f"Bearer {another_token}"},
+    )
+    assert denied.status_code == 403
+    assert client.get(
+        "/api/rms/my-grievances",
+        headers={"Authorization": f"Bearer {another_token}"},
+    ).json() == []
+
+
+def test_closed_grievance_cannot_be_edited_through_normal_decision_endpoint(
+    api: tuple[TestClient, sessionmaker],
+) -> None:
+    client, sessions = api
+    grievance_id = _seed_grievance(sessions)
+    from src.db import crud
+
+    with sessions() as db:
+        crud.update_grievance_status(db, grievance_id, "closed", changed_by="test-closer")
+
+    staff_token = _provision_account(client, sessions, "closed-case-staff", "staff", "IT Services")
+    response = client.post(
+        f"/api/rms/staff/review/{grievance_id}",
+        headers={"Authorization": f"Bearer {staff_token}"},
+        json={
+            "new_status": "under_review",
+            "decision_notes": "Attempt to edit a closed grievance.",
+        },
+    )
+    assert response.status_code == 409
+
+    with sessions() as db:
+        grievance = crud.get_grievance_by_id(db, grievance_id)
+        assert grievance.status == "closed"
+        assert grievance.human_decision is None
+        assert len(grievance.status_history) == 2
 
 
 def test_ai_draft_requires_explicit_request_and_does_not_resolve(

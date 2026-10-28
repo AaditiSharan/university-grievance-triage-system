@@ -149,6 +149,19 @@ class AIAnalysisResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class HumanDecisionResponse(BaseModel):
+    decided_by: Optional[str] = None
+    final_category: Optional[str] = None
+    final_subcategory: Optional[str] = None
+    final_route: Optional[str] = None
+    final_priority: Optional[str] = None
+    decision_notes: Optional[str] = None
+    resolution_solution: Optional[str] = None
+    decided_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class GrievanceResponse(BaseModel):
     grievance_id: str
     message_type: str
@@ -163,6 +176,7 @@ class GrievanceResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     ai_analysis: Optional[AIAnalysisResponse] = None
+    human_decision: Optional[HumanDecisionResponse] = None
 
     model_config = {"from_attributes": True}
 
@@ -200,19 +214,6 @@ class HumanDecisionSubmit(BaseModel):
 # ---------------------------------------------------------------------------
 # Admin views
 # ---------------------------------------------------------------------------
-
-class HumanDecisionResponse(BaseModel):
-    decided_by: str
-    final_category: Optional[str] = None
-    final_subcategory: Optional[str] = None
-    final_route: Optional[str] = None
-    final_priority: Optional[str] = None
-    decision_notes: Optional[str] = None
-    resolution_solution: Optional[str] = None
-    decided_at: datetime
-
-    model_config = {"from_attributes": True}
-
 
 class AdminGrievanceView(BaseModel):
     grievance_id: str

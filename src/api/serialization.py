@@ -12,7 +12,12 @@ def _decode_details(value: str | None) -> dict[str, Any]:
     return decoded if isinstance(decoded, dict) else {}
 
 
-def serialize_grievance(grievance: Grievance, *, include_audit: bool = False) -> dict[str, Any]:
+def serialize_grievance(
+    grievance: Grievance,
+    *,
+    include_audit: bool = False,
+    student_view: bool = False,
+) -> dict[str, Any]:
     analysis = grievance.ai_analysis
     details = _decode_details(analysis.analysis_details if analysis else None)
     if analysis and not details:
@@ -51,22 +56,26 @@ def serialize_grievance(grievance: Grievance, *, include_audit: bool = False) ->
     }
     if grievance.human_decision:
         decision = grievance.human_decision
-        result["human_decision"] = {
-            "decided_by": decision.decided_by,
+        serialized_decision = {
             "final_category": decision.final_category,
             "final_subcategory": decision.final_subcategory,
             "final_route": decision.final_route,
             "final_priority": decision.final_priority,
-            "decision_notes": decision.decision_notes,
             "resolution_solution": decision.resolution_solution,
             "decided_at": decision.decided_at,
         }
+        if not student_view:
+            serialized_decision.update({
+                "decided_by": decision.decided_by,
+                "decision_notes": decision.decision_notes,
+            })
+        result["human_decision"] = serialized_decision
     result["status_history"] = [
         {
             "previous_status": event.previous_status,
             "new_status": event.new_status,
-            "changed_by": event.changed_by,
             "changed_at": event.changed_at,
+            **({"changed_by": event.changed_by} if not student_view else {}),
         }
         for event in grievance.status_history
     ]
