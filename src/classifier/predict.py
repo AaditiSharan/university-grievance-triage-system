@@ -17,6 +17,14 @@ _le_sub = None
 _settings = None
 
 
+def _evidence_word(feature_name: str):
+    """Evidence shown to reviewers is words only: skip character n-grams, strip the union prefix."""
+    name = str(feature_name)
+    if name.startswith("c__"):
+        return None
+    return name[3:] if name.startswith("w__") else name
+
+
 def _load_settings() -> dict:
     global _settings
     if _settings is None:
@@ -130,11 +138,13 @@ def predict(text: str) -> dict:
         (float(row[0, feature_index] * coefficients[class_index, feature_index]), feature_index)
         for feature_index in row.indices
     ]
-    evidence = [
-        str(feature_names[index])
-        for weight, index in sorted(active_features, reverse=True)[:5]
-        if weight > 0
-    ]
+    evidence: list[str] = []
+    for weight, index in sorted(active_features, reverse=True):
+        if weight <= 0 or len(evidence) == 5:
+            break
+        word = _evidence_word(feature_names[index])
+        if word is not None:
+            evidence.append(word)
 
     return {
         "predicted_master": predicted_master,
