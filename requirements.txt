@@ -18,3 +18,5 @@ bcrypt<4.1
 httpx
 sentence-transformers
 torch
+groq==1.7.0
+python-dotenv
