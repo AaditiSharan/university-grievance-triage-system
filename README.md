@@ -87,6 +87,7 @@ Training uses the dataset's true_master and true_subcategory labels as-is, inclu
 Submissions receive triage suggestions and remain in submitted status until a reviewer records a human decision in the admin dashboard. Sensitivity, priority, routing and incident matches are explanations and recommendations; they do not close, resolve or otherwise decide a grievance automatically.
 
 Run the API integration and edge-case tests with:
+These tests help verify that the grievance workflow handles expected scenarios and edge cases.
 
 ```powershell
 python -m pytest -q tests\test_end_to_end.py```
