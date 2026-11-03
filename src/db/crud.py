@@ -1,7 +1,8 @@
 """
 CRUD helpers for UniResolve AI.
 
-All functions accept a SQLAlchemy Session as the first argument.
+All functions accept a SQLAlchemy Session, or a FirestoreSession when
+DB_BACKEND=firestore, as the first argument.
 """
 import json
 from datetime import datetime, date
@@ -9,9 +10,15 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from src.db import firestore_store
+from src.db.firestore_store import FirestoreSession
 from src.db.models import (
     AuditLog, Grievance, AIAnalysis, HumanDecision, StatusHistory, User
 )
+
+
+def _is_firestore(db) -> bool:
+    return isinstance(db, FirestoreSession)
 
 
 class FinalizedDecisionError(ValueError):
@@ -30,6 +37,8 @@ def create_user(
     role: str = "student",
     department: Optional[str] = None,
 ) -> User:
+    if _is_firestore(db):
+        return firestore_store.create_user(db, username, email, hashed_password, role, department)
     user = User(
         username=username,
         email=email,
@@ -44,10 +53,20 @@ def create_user(
 
 
 def get_user_by_username(db: Session, username: str) -> Optional[User]:
+    if _is_firestore(db):
+        return firestore_store.get_user_by_username(db, username)
     return db.query(User).filter(User.username == username).first()
 
 
+def get_user_by_email(db: Session, email: str) -> Optional[User]:
+    if _is_firestore(db):
+        return firestore_store.get_user_by_email(db, email)
+    return db.query(User).filter(User.email == email).first()
+
+
 def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
+    if _is_firestore(db):
+        return firestore_store.get_user_by_id(db, user_id)
     return db.query(User).filter(User.id == user_id).first()
 
 
@@ -81,8 +100,28 @@ def create_grievance(
     # Ensure uniqueness of grievance_id
     for _ in range(10):
         gid = _generate_grievance_id()
-        if not db.query(Grievance).filter(Grievance.grievance_id == gid).first():
+        if _is_firestore(db):
+            if not firestore_store.grievance_id_exists(db, gid):
+                break
+        elif not db.query(Grievance).filter(Grievance.grievance_id == gid).first():
             break
+
+    if _is_firestore(db):
+        return firestore_store.create_grievance(
+            db,
+            grievance_id=gid,
+            user_id=user_id,
+            message_type=message_type,
+            description=description,
+            language=language,
+            section=section,
+            hostel_block=hostel_block,
+            course_code=course_code,
+            event_name=event_name,
+            contact_no=contact_no,
+            created_by=created_by,
+            commit=commit,
+        )
 
     grievance = Grievance(
         grievance_id=gid,
@@ -110,6 +149,8 @@ def create_grievance(
 
 
 def get_grievance_by_id(db: Session, grievance_id: str) -> Optional[Grievance]:
+    if _is_firestore(db):
+        return firestore_store.get_grievance_by_id(db, grievance_id)
     return (
         db.query(Grievance)
         .filter(Grievance.grievance_id == grievance_id)
@@ -118,6 +159,8 @@ def get_grievance_by_id(db: Session, grievance_id: str) -> Optional[Grievance]:
 
 
 def get_grievances_by_user(db: Session, user_id: int) -> list:
+    if _is_firestore(db):
+        return firestore_store.get_grievances_by_user(db, user_id)
     return (
         db.query(Grievance)
         .filter(Grievance.user_id == user_id)
@@ -127,6 +170,8 @@ def get_grievances_by_user(db: Session, user_id: int) -> list:
 
 
 def get_all_grievances(db: Session, skip: int = 0, limit: int = 200) -> list:
+    if _is_firestore(db):
+        return firestore_store.get_all_grievances(db, skip, limit)
     return (
         db.query(Grievance)
         .order_by(Grievance.created_at.desc())
@@ -143,6 +188,8 @@ def update_grievance_status(
     changed_by: str = "system",
     commit: bool = True,
 ) -> Optional[Grievance]:
+    if _is_firestore(db):
+        return firestore_store.update_grievance_status(db, grievance_id, status, changed_by, commit)
     grievance = get_grievance_by_id(db, grievance_id)
     if grievance and grievance.status != status:
         previous_status = grievance.status
@@ -166,6 +213,8 @@ def update_grievance_status(
 def save_ai_analysis(
     db: Session, grievance_id: str, analysis: dict, commit: bool = True
 ) -> AIAnalysis:
+    if _is_firestore(db):
+        return firestore_store.save_ai_analysis(db, grievance_id, analysis, commit)
     # Remove existing if any (idempotent re-runs)
     existing = (
         db.query(AIAnalysis)
@@ -208,6 +257,8 @@ def save_ai_analysis(
 def save_human_decision(
     db: Session, grievance_id: str, decision: dict, commit: bool = True
 ) -> HumanDecision:
+    if _is_firestore(db):
+        return firestore_store.save_human_decision(db, grievance_id, decision, commit)
     grievance = get_grievance_by_id(db, grievance_id)
     if grievance and grievance.status in {"resolved", "closed"}:
         raise FinalizedDecisionError(
@@ -246,6 +297,8 @@ def create_audit_log(
     details: Optional[dict] = None,
     commit: bool = True,
 ) -> AuditLog:
+    if _is_firestore(db):
+        return firestore_store.create_audit_log(db, grievance_id, action, actor, details, commit)
     log = AuditLog(
         grievance_id=grievance_id,
         action=action,
@@ -259,6 +312,8 @@ def create_audit_log(
 
 
 def get_pending_review_grievances(db: Session) -> list:
+    if _is_firestore(db):
+        return firestore_store.get_pending_review_grievances(db)
     """Return grievances that need human review, sorted by priority."""
     priority_order = {"P1": 0, "P2": 1, "P3": 2, "P4": 3}
     grievances = (

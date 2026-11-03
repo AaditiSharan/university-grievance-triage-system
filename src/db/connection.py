@@ -1,8 +1,10 @@
 """
 Database connection and session factory for UniResolve AI.
 
-Settings are read from config/settings.yaml.
+Settings are read from config/settings.yaml. Set DB_BACKEND=firestore to
+store data in Google Cloud Firestore instead of SQL (used on Cloud Run).
 """
+import os
 from pathlib import Path
 
 import yaml
@@ -29,9 +31,18 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
+def using_firestore() -> bool:
+    return os.getenv("DB_BACKEND", "sql").strip().lower() == "firestore"
+
+
 def get_db():
     """FastAPI dependency that yields a DB session and ensures cleanup."""
-    db = SessionLocal()
+    if using_firestore():
+        from src.db.firestore_store import FirestoreSession
+
+        db = FirestoreSession()
+    else:
+        db = SessionLocal()
     try:
         yield db
     finally:
@@ -40,6 +51,8 @@ def get_db():
 
 def create_tables():
     """Create all tables (called at application startup)."""
+    if using_firestore():
+        return
     from src.db.models import Base  # local import to avoid circular deps
     Base.metadata.create_all(bind=engine)
     migrations = {

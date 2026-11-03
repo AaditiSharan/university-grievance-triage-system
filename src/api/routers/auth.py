@@ -16,7 +16,7 @@ from src.auth.security import (
     verify_password,
 )
 from src.db.connection import get_db
-from src.db.crud import create_user, get_user_by_username
+from src.db.crud import create_user, get_user_by_email, get_user_by_username
 from src.db.models import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -69,7 +69,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
 
     if get_user_by_username(db, payload.username):
         raise HTTPException(status_code=409, detail="Username is already registered.")
-    if db.query(User).filter(User.email == email).first():
+    if get_user_by_email(db, email):
         raise HTTPException(status_code=409, detail="Email is already registered.")
     return create_user(
         db,
