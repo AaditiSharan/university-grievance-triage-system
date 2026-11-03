@@ -44,6 +44,10 @@ editable response text. Sensitive-flagged cases are rejected by the backend
 and must be handled by a human. Drafts are never sent or used to resolve a case
 without an individually approved staff decision.
 
+## Deploy online (Firebase)
+
+The app can be deployed as Firebase Hosting (website) + Cloud Run (FastAPI backend and AI) + Cloud Firestore (data). Follow the click-by-click guide in [docs/DEPLOY_FIREBASE.md](docs/DEPLOY_FIREBASE.md). Local development below is unchanged and still uses SQLite; the backend switches to Firestore only when `DB_BACKEND=firestore` is set.
+
 ## Run locally
 
 Run locally

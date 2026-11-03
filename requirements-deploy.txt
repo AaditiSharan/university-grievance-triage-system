@@ -1,0 +1,15 @@
+# Runtime dependencies for the Cloud Run container (pinned; no torch/test tools).
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.2
+python-multipart==0.0.32
+sqlalchemy==2.0.55
+pandas==2.3.3
+numpy==2.2.6
+scikit-learn==1.7.2
+joblib==1.6.0
+pyyaml==6.0.3
+pyjwt==2.15.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+google-cloud-firestore==2.34.1

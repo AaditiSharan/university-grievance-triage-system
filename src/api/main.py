@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routers import admin, auth, rms, staff
-from src.db.connection import create_tables
+from src.db.connection import create_tables, using_firestore
 from src.rules.sensitivity_engine import load_config as load_sensitivity_config
 
 app = FastAPI(
@@ -34,6 +34,9 @@ app.include_router(staff.router, prefix="/api")
 
 @app.on_event("startup")
 def initialize_database() -> None:
+    if using_firestore() and not os.getenv("SECRET_KEY"):
+        # Cloud Run runs several instances; each needs the same signing key.
+        raise RuntimeError("SECRET_KEY must be set when DB_BACKEND=firestore.")
     create_tables()
     # Refuse to start with an invalid rules file instead of failing on a student's submission.
     load_sensitivity_config()
