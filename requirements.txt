@@ -12,6 +12,8 @@ pydantic
 python-multipart
 python-dotenv
 sqlalchemy
+psycopg[binary]>=3.1.18
+psycopg2-binary>=2.9.9
 pyjwt
 passlib[bcrypt]
 bcrypt<4.1
@@ -19,4 +21,3 @@ httpx
 sentence-transformers
 torch
 groq==1.7.0
-python-dotenv
