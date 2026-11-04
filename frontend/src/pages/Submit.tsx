@@ -468,7 +468,6 @@ export default function Submit() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
   const [description, setDescription] = useState('');
-  const [language, setLanguage] = useState('English');
   const [section, setSection] = useState('');
   const [hostelBlock, setHostelBlock] = useState('');
   const [courseCode, setCourseCode] = useState('');
@@ -512,7 +511,6 @@ export default function Submit() {
     const payload: GrievanceSubmit = {
       message_type: msgType,
       description: description.trim(),
-      language,
       ...(selectedMaster && { selected_master: selectedMaster }),
       ...(selectedCategory && { selected_category: selectedCategory }),
       ...(selectedSubcategory && { selected_subcategory: selectedSubcategory }),
@@ -704,30 +702,6 @@ export default function Submit() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
-                <div className="flex gap-3">
-                  {['English', 'Hinglish', 'Hindi'].map((lang) => (
-                    <label
-                      key={lang}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg cursor-pointer text-sm transition-all ${
-                        language === lang
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        value={lang}
-                        checked={language === lang}
-                        onChange={() => setLanguage(lang)}
-                        className="sr-only"
-                      />
-                      {lang}
-                    </label>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
 
