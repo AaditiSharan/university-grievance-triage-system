@@ -26,5 +26,6 @@ database:
 
 auth:
   staff_email_domains:
+    - lpu.in
     - example.edu
     - university.edu
