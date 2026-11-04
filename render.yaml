@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: university-grievance-triage-system
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_ORIGINS
+        value: "*"
+      - key: STAFF_EMAIL_DOMAINS
+        value: "example.edu,university.edu"

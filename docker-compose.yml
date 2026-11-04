@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  grievance-system:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - SECRET_KEY=generate_a_secure_random_key_in_production
+      - FRONTEND_ORIGINS=*
+      - STAFF_EMAIL_DOMAINS=example.edu,university.edu
+    volumes:
+      - grievance_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  grievance_data:

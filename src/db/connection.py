@@ -1,8 +1,9 @@
 """
 Database connection and session factory for UniResolve AI.
 
-Settings are read from config/settings.yaml.
+Settings are read from config/settings.yaml or DATABASE_URL env var.
 """
+import os
 from pathlib import Path
 
 import yaml
@@ -13,10 +14,17 @@ BASE_DIR = Path(__file__).parent.parent.parent
 
 
 def _load_db_url() -> str:
+    env_url = os.getenv("DATABASE_URL")
+    if env_url:
+        if env_url.startswith("postgres://"):
+            env_url = env_url.replace("postgres://", "postgresql://", 1)
+        return env_url
     settings_path = BASE_DIR / "config" / "settings.yaml"
-    with open(settings_path, "r", encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
-    return cfg.get("database", {}).get("url", "sqlite:///./grievances.db")
+    if settings_path.exists():
+        with open(settings_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+        return cfg.get("database", {}).get("url", "sqlite:///./grievances.db")
+    return "sqlite:///./grievances.db"
 
 
 DATABASE_URL = _load_db_url()
