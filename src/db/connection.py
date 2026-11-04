@@ -5,12 +5,25 @@ Settings are read from config/settings.yaml or DATABASE_URL env var.
 """
 import os
 import re
+import socket
 import time
 from pathlib import Path
 
 import yaml
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
+
+# Force IPv4 socket resolution (Render free tier lacks IPv6 outbound routing)
+_orig_getaddrinfo = socket.getaddrinfo
+
+
+def _ipv4_first_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    if family == 0 or family == socket.AF_UNSPEC:
+        family = socket.AF_INET
+    return _orig_getaddrinfo(host, port, family, type, proto, flags)
+
+
+socket.getaddrinfo = _ipv4_first_getaddrinfo
 
 BASE_DIR = Path(__file__).parent.parent.parent
 

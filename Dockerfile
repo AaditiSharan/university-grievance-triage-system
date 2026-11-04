@@ -13,6 +13,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Configure glibc to prefer IPv4 over IPv6 (fixes Render unreachable IPv6 for cloud DBs)
+RUN echo "precedence ::ffff:0:0/96  100" >> /etc/gai.conf
+
 # Install curl for health checks if needed
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
