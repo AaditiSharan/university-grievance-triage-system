@@ -4,6 +4,7 @@ Database connection and session factory for UniResolve AI.
 Settings are read from config/settings.yaml or DATABASE_URL env var.
 """
 import os
+import re
 import time
 from pathlib import Path
 
@@ -17,12 +18,20 @@ BASE_DIR = Path(__file__).parent.parent.parent
 def _load_db_url() -> str:
     env_url = os.getenv("DATABASE_URL", "").strip()
     if env_url:
-        # Strip potential wrapping quotes or psql prefix
+        # Strip potential wrapping quotes or psql command prefix
         env_url = env_url.strip("'\"")
         if env_url.startswith("psql "):
             env_url = env_url[5:].strip().strip("'\"")
         if env_url.startswith("postgres://"):
             env_url = env_url.replace("postgres://", "postgresql://", 1)
+
+        # Remove channel_binding parameter which causes libpq/psycopg connection errors with Neon
+        env_url = re.sub(r'([?&])channel_binding=[^&]*', '', env_url)
+        env_url = re.sub(r'[?&]+$', '', env_url)
+        if '?' not in env_url and '&' in env_url:
+            env_url = env_url.replace('&', '?', 1)
+        env_url = env_url.strip().strip("'\"")
+
         # Ensure sslmode=require for serverless PostgreSQL if not present
         if ("neon.tech" in env_url or "supabase.co" in env_url) and "sslmode=" not in env_url:
             separator = "&" if "?" in env_url else "?"
