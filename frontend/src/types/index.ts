@@ -19,7 +19,6 @@ export interface GrievanceSubmit {
   selected_master?: string;
   selected_category?: string;
   selected_subcategory?: string;
-  language?: string;
   section?: string;
   hostel_block?: string;
   course_code?: string;
